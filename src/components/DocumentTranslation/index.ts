@@ -1,0 +1,1 @@
+export { DocumentTranslation } from './DocumentTranslation';

@@ -1,0 +1,137 @@
+{
+  "app": {
+    "title": "Moe Translate"
+  },
+  "tabs": {
+    "translate": "Translate",
+    "explain": "Explain",
+    "docTranslate": "Doc Translate"
+  },
+  "translation": {
+    "source": "Source",
+    "target": "Target",
+    "placeholder": "Enter text to translate...",
+    "resultPlaceholder": "Translation will appear here...",
+    "translating": "Translating...",
+    "translate": "Translate"
+  },
+  "explain": {
+    "placeholder": "Enter words or phrases to explain...",
+    "resultPlaceholder": "Explanation will appear here...",
+    "explaining": "Explaining...",
+    "explain": "Explain"
+  },
+  "languageSelector": {
+    "autoDetect": "Auto Detect"
+  },
+  "styleSettings": {
+    "style": "Style",
+    "formal": "Formal",
+    "casual": "Casual",
+    "academic": "Academic",
+    "literary": "Literary",
+    "custom": "Custom",
+    "customPlaceholder": "Describe the style you want (e.g., 'Use simple words for beginners')..."
+  },
+  "buttons": {
+    "paste": "Paste from clipboard",
+    "copy": "Copy translation",
+    "swap": "Swap languages"
+  },
+  "docTranslation": {
+    "title": "Document Translation",
+    "urlPlaceholder": "Enter URL to fetch markdown...",
+    "fetch": "Fetch",
+    "fetching": "Fetching...",
+    "orUpload": "or upload file",
+    "uploadFile": "Upload TXT/MD",
+    "fileType": "{{type}} - {{chars}} chars (~{{tokens}} tokens)",
+    "warning": "Content may be too long for the model's context window ({{maxContext}} tokens). Consider splitting the document.",
+    "source": "Source:",
+    "target": "Target:",
+    "preview": "Source Preview:",
+    "translating": "Translating...",
+    "translateDoc": "Translate Document",
+    "result": "Translation Result:",
+    "translationResult": "Translation Result",
+    "back": "Back",
+    "download": "Download {{type}}",
+    "complete": "Translation complete!",
+    "incomplete": "Translation incomplete, continuing... ({{current}}/{{max}})",
+    "warning": "Warning: Translation may be incomplete. Output was truncated.",
+    "error": "Error: {{message}}"
+  },
+  "history": {
+    "title": "History",
+    "history": "History",
+    "favorites": "Favorites",
+    "search": "Search...",
+    "export": "Export",
+    "import": "Import",
+    "clearAll": "Clear All",
+    "noHistory": "No {{type}} yet",
+    "translateMode": "Translate",
+    "parseMode": "Parse",
+    "removeFavorite": "Remove from favorites",
+    "addFavorite": "Add to favorites",
+    "delete": "Delete"
+  },
+  "settings": {
+    "title": "Settings",
+    "close": "Close",
+    "apiConfig": "API Configuration",
+    "apiBaseUrl": "API Base URL",
+    "apiKey": "API Key",
+    "model": "Model",
+    "tokens": "tokens",
+    "jinaApi": "Jina API (for URL fetching)",
+    "jinaApiDesc": "Optional. Get your API key from jina.ai for higher rate limits.",
+    "jinaApiKey": "Jina API Key",
+    "jinaPlaceholder": "Optional - for URL fetching",
+    "customModels": "Custom Models",
+    "modelName": "Model name (e.g., GPT-4o)",
+    "modelId": "Model ID (e.g., gpt-4o)",
+    "maxContext": "Max context (e.g., 128000)",
+    "supportsThinking": "Supports Thinking",
+    "addModel": "Add Model",
+    "remove": "Remove",
+    "defaultLangSettings": "Default Language Settings",
+    "defaultSourceLang": "Default Source Language",
+    "defaultTargetLang": "Default Target Language",
+    "defaultMode": "Default Mode",
+    "defaultStyle": "Default Style",
+    "customLanguages": "Custom Languages",
+    "langName": "Language name (e.g., Sanskrit)",
+    "promptSuffix": "Prompt suffix for LLM",
+    "add": "Add",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "modelSwitcher": {
+    "selectModel": "Select model"
+  },
+  "thinkingChain": {
+    "title": "Thinking Process"
+  },
+  "warnings": {
+    "apiKeyNeeded": "Please configure your API key in Settings to enable translation.",
+    "openSettings": "Open Settings"
+  },
+  "styleCustomization": {
+    "title": "Style Customization",
+    "basic": "Basic",
+    "advanced": "Advanced",
+    "docs": "Docs",
+    "presets": "Presets",
+    "preview": "Preview",
+    "advancedDesc": "Write custom CSS to override or extend the default styles.",
+    "cssPlaceholder": "/* Enter your custom CSS here */\n:root {\n  --color-primary: #your-color;\n}\n\n.dark-mode {\n  --color-bg: #0f0f0f;\n}",
+    "hints": "Common patterns:",
+    "cssVarsDoc": "CSS Variables Reference",
+    "docsIntro": "All CSS variables used in this app. Override them in Advanced mode or via :root selector.",
+    "usage": "Usage Examples",
+    "reset": "Reset",
+    "saving": "Saving...",
+    "apply": "Apply & Save"
+  }
+}

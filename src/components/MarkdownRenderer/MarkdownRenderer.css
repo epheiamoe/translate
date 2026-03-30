@@ -1,0 +1,113 @@
+.markdown-renderer {
+  padding: var(--spacing-4);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+.markdown-renderer h1 {
+  font-size: var(--font-size-2xl);
+  margin-bottom: var(--spacing-4);
+  padding-bottom: var(--spacing-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.markdown-renderer h2 {
+  font-size: var(--font-size-xl);
+  margin-top: var(--spacing-4);
+  margin-bottom: var(--spacing-3);
+}
+
+.markdown-renderer h3 {
+  font-size: var(--font-size-lg);
+  margin-top: var(--spacing-3);
+  margin-bottom: var(--spacing-2);
+}
+
+.markdown-renderer p {
+  margin-bottom: var(--spacing-3);
+}
+
+.markdown-renderer ul,
+.markdown-renderer ol {
+  margin-bottom: var(--spacing-3);
+  padding-left: var(--spacing-6);
+}
+
+.markdown-renderer li {
+  margin-bottom: var(--spacing-1);
+}
+
+.markdown-renderer code {
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 0.9em;
+  padding: 2px 6px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.markdown-renderer pre {
+  margin-bottom: var(--spacing-3);
+  padding: var(--spacing-3);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+
+.markdown-renderer pre code {
+  padding: 0;
+  background: none;
+}
+
+.markdown-renderer blockquote {
+  margin-bottom: var(--spacing-3);
+  padding-left: var(--spacing-4);
+  border-left: 4px solid var(--color-primary);
+  color: var(--color-text-secondary);
+}
+
+.markdown-renderer a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.markdown-renderer a:hover {
+  text-decoration: underline;
+}
+
+.markdown-renderer table {
+  width: 100%;
+  margin-bottom: var(--spacing-3);
+  border-collapse: collapse;
+}
+
+.markdown-renderer th,
+.markdown-renderer td {
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.markdown-renderer th {
+  background: var(--color-bg-secondary);
+  font-weight: 600;
+}
+
+.markdown-renderer hr {
+  margin: var(--spacing-4) 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.markdown-renderer img {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-renderer strong {
+  font-weight: 600;
+}
+
+.markdown-renderer em {
+  font-style: italic;
+}

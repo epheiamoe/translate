@@ -1,0 +1,137 @@
+{
+  "app": {
+    "title": "萌翻译"
+  },
+  "tabs": {
+    "translate": "翻译",
+    "explain": "解释",
+    "docTranslate": "文档翻译"
+  },
+  "translation": {
+    "source": "源语言",
+    "target": "目标语言",
+    "placeholder": "输入要翻译的文本...",
+    "resultPlaceholder": "翻译结果将在此显示...",
+    "translating": "翻译中...",
+    "translate": "翻译"
+  },
+  "explain": {
+    "placeholder": "输入要解释的单词或短语...",
+    "resultPlaceholder": "解释将在此显示...",
+    "explaining": "解释中...",
+    "explain": "解释"
+  },
+  "languageSelector": {
+    "autoDetect": "自动检测"
+  },
+  "styleSettings": {
+    "style": "风格",
+    "formal": "正式",
+    "casual": "休闲",
+    "academic": "学术",
+    "literary": "文学",
+    "custom": "自定义",
+    "customPlaceholder": "描述你想要的风格（例如：'用简单的词汇，适合初学者'）..."
+  },
+  "buttons": {
+    "paste": "从剪贴板粘贴",
+    "copy": "复制翻译结果",
+    "swap": "交换语言"
+  },
+  "docTranslation": {
+    "title": "文档翻译",
+    "urlPlaceholder": "输入要获取的 Markdown 链接...",
+    "fetch": "获取",
+    "fetching": "获取中...",
+    "orUpload": "或上传文件",
+    "uploadFile": "上传 TXT/MD",
+    "fileType": "{{type}} - {{chars}} 字符（约 {{tokens}} tokens）",
+    "warning": "内容可能超出模型的上下文窗口限制（{{maxContext}} tokens）。建议拆分文档。",
+    "source": "源文档：",
+    "target": "目标：",
+    "preview": "源文档预览：",
+    "translating": "翻译中...",
+    "translateDoc": "翻译文档",
+    "result": "翻译结果：",
+    "translationResult": "翻译结果",
+    "back": "返回",
+    "download": "下载 {{type}}",
+    "complete": "翻译完成！",
+    "incomplete": "翻译未完成，继续中...（{{current}}/{{max}}）",
+    "warning": "警告：翻译可能不完整。输出已被截断。",
+    "error": "错误：{{message}}"
+  },
+  "history": {
+    "title": "历史记录",
+    "history": "历史记录",
+    "favorites": "收藏夹",
+    "search": "搜索...",
+    "export": "导出",
+    "import": "导入",
+    "clearAll": "清空全部",
+    "noHistory": "暂无{{type}}",
+    "translateMode": "翻译",
+    "parseMode": "解析",
+    "removeFavorite": "取消收藏",
+    "addFavorite": "添加到收藏",
+    "delete": "删除"
+  },
+  "settings": {
+    "title": "设置",
+    "close": "关闭",
+    "apiConfig": "API 配置",
+    "apiBaseUrl": "API 基础地址",
+    "apiKey": "API 密钥",
+    "model": "模型",
+    "tokens": "tokens",
+    "jinaApi": "Jina API（用于 URL 获取）",
+    "jinaApiDesc": "可选。从 jina.ai 获取 API 密钥以获得更高的调用限制。",
+    "jinaApiKey": "Jina API 密钥",
+    "jinaPlaceholder": "可选 - 用于 URL 获取",
+    "customModels": "自定义模型",
+    "modelName": "模型名称（例如：GPT-4o）",
+    "modelId": "模型 ID（例如：gpt-4o）",
+    "maxContext": "最大上下文（例如：128000）",
+    "supportsThinking": "支持思考模式",
+    "addModel": "添加模型",
+    "remove": "移除",
+    "defaultLangSettings": "默认语言设置",
+    "defaultSourceLang": "默认源语言",
+    "defaultTargetLang": "默认目标语言",
+    "defaultMode": "默认模式",
+    "defaultStyle": "默认风格",
+    "customLanguages": "自定义语言",
+    "langName": "语言名称（例如：梵文）",
+    "promptSuffix": "LLM 的提示后缀",
+    "add": "添加",
+    "cancel": "取消",
+    "save": "保存"
+  },
+  "modelSwitcher": {
+    "selectModel": "选择模型"
+  },
+  "thinkingChain": {
+    "title": "思考过程"
+  },
+  "warnings": {
+    "apiKeyNeeded": "请在设置中配置 API 密钥以启用翻译功能。",
+    "openSettings": "打开设置"
+  },
+  "styleCustomization": {
+    "title": "样式自定义",
+    "basic": "基础",
+    "advanced": "高级",
+    "docs": "文档",
+    "presets": "预设",
+    "preview": "预览",
+    "advancedDesc": "编写自定义 CSS 来覆盖或扩展默认样式。",
+    "cssPlaceholder": "/* 在此输入你的自定义 CSS */\n:root {\n  --color-primary: #your-color;\n}\n\n.dark-mode {\n  --color-bg: #0f0f0f;\n}",
+    "hints": "常用模式：",
+    "cssVarsDoc": "CSS 变量参考",
+    "docsIntro": "本应用使用的所有 CSS 变量。可以在高级模式下通过 :root 选择器覆盖它们。",
+    "usage": "使用示例",
+    "reset": "重置",
+    "saving": "保存中...",
+    "apply": "应用并保存"
+  }
+}
