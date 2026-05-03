@@ -82,17 +82,20 @@ describe('Database Types', () => {
         defaultMode: 'translation',
         defaultStyle: 'formal',
         customStyle: '',
-        apiBaseUrl: 'https://api.deepseek.com/v1',
-        apiKey: 'test-key',
-        selectedModel: 'deepseek-chat',
+        customInstructions: '',
+        glossary: '',
+        selectedProvider: 'deepseek',
+        selectedModel: 'deepseek-v4-flash',
+        providerApiKeys: {},
         customLanguages: [],
-        customModels: [],
-        jinaApiKey: ''
+        customProviders: [],
+        jinaApiKey: '',
+        thinkingEnabled: false
       };
 
       expect(settings.defaultSourceLang).toBe('auto');
       expect(settings.defaultTargetLang).toBe('zh');
-      expect(settings.apiBaseUrl).toContain('https://');
+      expect(settings.selectedProvider).toBe('deepseek');
     });
   });
 });

@@ -2,6 +2,39 @@
   "app": {
     "title": "萌翻译"
   },
+  "languages": {
+    "auto": "自动检测",
+    "en": "英语",
+    "zh": "中文",
+    "ja": "日语",
+    "ko": "韩语",
+    "fr": "法语",
+    "de": "德语",
+    "es": "西班牙语",
+    "it": "意大利语",
+    "pt": "葡萄牙语",
+    "ru": "俄语",
+    "ar": "阿拉伯语",
+    "hi": "印地语",
+    "th": "泰语",
+    "vi": "越南语",
+    "id": "印尼语",
+    "ms": "马来语",
+    "tr": "土耳其语",
+    "pl": "波兰语",
+    "nl": "荷兰语",
+    "sv": "瑞典语",
+    "da": "丹麦语",
+    "no": "挪威语",
+    "fi": "芬兰语",
+    "cs": "捷克语",
+    "el": "希腊语",
+    "he": "希伯来语",
+    "uk": "乌克兰语",
+    "ro": "罗马尼亚语",
+    "hu": "匈牙利语",
+    "bg": "保加利亚语"
+  },
   "tabs": {
     "translate": "翻译",
     "explain": "解释",
@@ -13,19 +46,26 @@
     "placeholder": "输入要翻译的文本...",
     "resultPlaceholder": "翻译结果将在此显示...",
     "translating": "翻译中...",
-    "translate": "翻译"
+    "translate": "翻译",
+    "showAlternatives": "显示更多翻译结果",
+    "loadingAlternatives": "加载中...",
+    "alternativesLabel": "其他翻译版本",
+    "regenerateAlternatives": "重新生成",
+    "stop": "停止"
   },
   "explain": {
     "placeholder": "输入要解释的单词或短语...",
     "resultPlaceholder": "解释将在此显示...",
     "explaining": "解释中...",
-    "explain": "解释"
+    "explain": "解释",
+    "title": "解释结果"
   },
   "languageSelector": {
     "autoDetect": "自动检测"
   },
   "styleSettings": {
     "style": "风格",
+    "unspecified": "未指定",
     "formal": "正式",
     "casual": "休闲",
     "academic": "学术",
@@ -36,7 +76,9 @@
   "buttons": {
     "paste": "从剪贴板粘贴",
     "copy": "复制翻译结果",
-    "swap": "交换语言"
+    "swap": "交换语言",
+    "fullscreen": "全屏",
+    "toggleMarkdown": "切换 Markdown"
   },
   "docTranslation": {
     "title": "文档翻译",
@@ -101,17 +143,49 @@
     "defaultMode": "默认模式",
     "defaultStyle": "默认风格",
     "customLanguages": "自定义语言",
+    "customProviders": "自定义提供商",
+    "provider": "提供商",
+    "providerName": "提供商名称",
+    "baseUrl": "基础 URL",
+    "addProvider": "添加提供商",
+    "apiKeyPlaceholder": "输入所选提供商的 API 密钥",
     "langName": "语言名称（例如：梵文）",
     "promptSuffix": "LLM 的提示后缀",
     "add": "添加",
     "cancel": "取消",
-    "save": "保存"
+    "save": "保存",
+    "thinkingMode": "思考模式",
+    "thinkingModeDesc": "启用后，支持的模型会在最终回复之前显示推理过程。",
+    "thinkingToggle": "思考",
+    "enabled": "已启用",
+    "disabled": "已禁用",
+    "prompts": "提示词模板",
+    "promptsDesc": "自定义发送给 AI 的提示词。每个提示词下方显示了可用的变量。",
+    "systemPrompts": "系统提示词",
+    "userPrompts": "用户提示词",
+    "resetCurrent": "重置当前标签",
+    "resetAll": "全部重置为默认",
+    "promptTranslation": "短文本翻译",
+    "promptTranslationLong": "长文本翻译",
+    "promptTranslationContinue": "续写截断翻译",
+    "promptParsing": "单词/短语解释",
+    "promptLanguageDetection": "语言检测",
+    "promptDocTranslation": "文档翻译",
+    "promptAlternativeTranslation": "备选翻译",
+    "edit": "编辑",
+    "saving": "保存中...",
+    "apply": "应用"
   },
   "modelSwitcher": {
     "selectModel": "选择模型"
   },
+  "providerSwitcher": {
+    "selectProvider": "选择提供商"
+  },
   "thinkingChain": {
-    "title": "思考过程"
+    "title": "思考过程",
+    "view": "查看思考",
+    "hide": "隐藏思考"
   },
   "warnings": {
     "apiKeyNeeded": "请在设置中配置 API 密钥以启用翻译功能。",
@@ -133,5 +207,19 @@
     "reset": "重置",
     "saving": "保存中...",
     "apply": "应用并保存"
+  },
+  "tokenStats": {
+    "title": "Token 统计",
+    "total": "累计消耗",
+    "monthly": "本月消耗"
+  },
+  "customInstructions": {
+    "title": "自定义指令",
+    "instructions": "指令",
+    "glossary": "术语表",
+    "instructionsDesc": "添加自定义指令，AI 会在翻译时遵循这些指令。",
+    "instructionsPlaceholder": "例如：\n- 商务场景使用正式语言\n- 技术文档使用简洁表达\n- 优先使用简体中文",
+    "glossaryDesc": "添加术语及其翻译，AI 翻译时会参考这些术语。",
+    "glossaryPlaceholder": "例如：\nAPI -> 应用程序接口\nFrontend -> 前端\nBackend -> 后端\nMachine Learning -> 机器学习"
   }
 }

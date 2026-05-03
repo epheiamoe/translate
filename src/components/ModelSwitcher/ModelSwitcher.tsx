@@ -1,9 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import './ModelSwitcher.css';
 
+interface ModelOption {
+  name: string;
+  supports_thinking: boolean;
+}
+
 interface ModelSwitcherProps {
   currentModel: string;
-  models: Record<string, { name: string; supports_thinking: boolean }>;
+  models: Record<string, ModelOption>;
   onSelect: (model: string) => void;
 }
 
@@ -13,6 +18,22 @@ export function ModelSwitcher({ currentModel, models, onSelect }: ModelSwitcherP
     onSelect(e.target.value);
   };
 
+  const modelEntries = Object.entries(models);
+
+  if (modelEntries.length === 0) {
+    return (
+      <div className="model-switcher">
+        <select
+          className="model-select"
+          disabled
+          aria-label={t('modelSwitcher.selectModel')}
+        >
+          <option value="">No models available</option>
+        </select>
+      </div>
+    );
+  }
+
   return (
     <div className="model-switcher">
       <select
@@ -21,7 +42,7 @@ export function ModelSwitcher({ currentModel, models, onSelect }: ModelSwitcherP
         onChange={handleChange}
         aria-label={t('modelSwitcher.selectModel')}
       >
-        {Object.entries(models).map(([key, model]) => (
+        {modelEntries.map(([key, model]) => (
           <option key={key} value={key}>
             {model.name}
             {model.supports_thinking ? ' 🤖' : ''}

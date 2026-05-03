@@ -23,13 +23,18 @@ export function LanguageSelector({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { settings } = useAppStore();
 
+  const getLangName = (code: string): string => {
+    const translated = t(`languages.${code}`);
+    return translated !== `languages.${code}` ? translated : languages[code] || code;
+  };
+
   const allLanguages: Record<string, string> = {
     ...(showAutoOption ? { auto: t('languageSelector.autoDetect') } : {}),
     ...languages,
     ...Object.fromEntries(settings.customLanguages.map(cl => [cl.id, cl.name]))
   };
 
-  const displayName = allLanguages[value] || value;
+  const displayName = getLangName(value);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -72,7 +77,7 @@ export function LanguageSelector({
               aria-selected={value === code}
               onClick={() => handleSelect(code)}
             >
-              {name}
+              {getLangName(code)}
               {value === code && (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polyline points="20 6 9 17 4 12"/>

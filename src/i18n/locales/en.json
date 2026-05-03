@@ -2,6 +2,39 @@
   "app": {
     "title": "Moe Translate"
   },
+  "languages": {
+    "auto": "Auto Detect",
+    "en": "English",
+    "zh": "Chinese",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "fr": "French",
+    "de": "German",
+    "es": "Spanish",
+    "it": "Italian",
+    "pt": "Portuguese",
+    "ru": "Russian",
+    "ar": "Arabic",
+    "hi": "Hindi",
+    "th": "Thai",
+    "vi": "Vietnamese",
+    "id": "Indonesian",
+    "ms": "Malay",
+    "tr": "Turkish",
+    "pl": "Polish",
+    "nl": "Dutch",
+    "sv": "Swedish",
+    "da": "Danish",
+    "no": "Norwegian",
+    "fi": "Finnish",
+    "cs": "Czech",
+    "el": "Greek",
+    "he": "Hebrew",
+    "uk": "Ukrainian",
+    "ro": "Romanian",
+    "hu": "Hungarian",
+    "bg": "Bulgarian"
+  },
   "tabs": {
     "translate": "Translate",
     "explain": "Explain",
@@ -13,19 +46,26 @@
     "placeholder": "Enter text to translate...",
     "resultPlaceholder": "Translation will appear here...",
     "translating": "Translating...",
-    "translate": "Translate"
+    "translate": "Translate",
+    "showAlternatives": "Show more translations",
+    "loadingAlternatives": "Loading...",
+    "alternativesLabel": "Alternative translations",
+    "regenerateAlternatives": "Regenerate",
+    "stop": "Stop"
   },
   "explain": {
     "placeholder": "Enter words or phrases to explain...",
     "resultPlaceholder": "Explanation will appear here...",
     "explaining": "Explaining...",
-    "explain": "Explain"
+    "explain": "Explain",
+    "title": "Explanation"
   },
   "languageSelector": {
     "autoDetect": "Auto Detect"
   },
   "styleSettings": {
     "style": "Style",
+    "unspecified": "Unspecified",
     "formal": "Formal",
     "casual": "Casual",
     "academic": "Academic",
@@ -36,7 +76,9 @@
   "buttons": {
     "paste": "Paste from clipboard",
     "copy": "Copy translation",
-    "swap": "Swap languages"
+    "swap": "Swap languages",
+    "fullscreen": "Fullscreen",
+    "toggleMarkdown": "Toggle Markdown"
   },
   "docTranslation": {
     "title": "Document Translation",
@@ -101,17 +143,49 @@
     "defaultMode": "Default Mode",
     "defaultStyle": "Default Style",
     "customLanguages": "Custom Languages",
+    "customProviders": "Custom Providers",
+    "provider": "Provider",
+    "providerName": "Provider name",
+    "baseUrl": "Base URL",
+    "addProvider": "Add Provider",
+    "apiKeyPlaceholder": "Enter API key for selected provider",
     "langName": "Language name (e.g., Sanskrit)",
     "promptSuffix": "Prompt suffix for LLM",
     "add": "Add",
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "thinkingMode": "Thinking Mode",
+    "thinkingModeDesc": "When enabled, supported models will show their reasoning process before the final response.",
+    "thinkingToggle": "Thinking",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "prompts": "Prompt Templates",
+    "promptsDesc": "Customize the prompts sent to the AI. Available variables are shown below each prompt.",
+    "systemPrompts": "System Prompts",
+    "userPrompts": "User Prompts",
+    "resetCurrent": "Reset Current Tab",
+    "resetAll": "Reset All to Defaults",
+    "promptTranslation": "Short Text Translation",
+    "promptTranslationLong": "Long Text Translation",
+    "promptTranslationContinue": "Continue Cut-off Translation",
+    "promptParsing": "Word/Phrase Explanation",
+    "promptLanguageDetection": "Language Detection",
+    "promptDocTranslation": "Document Translation",
+    "promptAlternativeTranslation": "Alternative Translations",
+    "edit": "Edit",
+    "saving": "Saving...",
+    "apply": "Apply"
   },
   "modelSwitcher": {
     "selectModel": "Select model"
   },
+  "providerSwitcher": {
+    "selectProvider": "Select provider"
+  },
   "thinkingChain": {
-    "title": "Thinking Process"
+    "title": "Thinking Process",
+    "view": "View thinking",
+    "hide": "Hide thinking"
   },
   "warnings": {
     "apiKeyNeeded": "Please configure your API key in Settings to enable translation.",
@@ -133,5 +207,19 @@
     "reset": "Reset",
     "saving": "Saving...",
     "apply": "Apply & Save"
+  },
+  "tokenStats": {
+    "title": "Token Statistics",
+    "total": "Total Tokens",
+    "monthly": "This Month"
+  },
+  "customInstructions": {
+    "title": "Custom Instructions",
+    "instructions": "Instructions",
+    "glossary": "Glossary",
+    "instructionsDesc": "Add custom instructions for the AI. These will be included in the system prompt.",
+    "instructionsPlaceholder": "E.g., Always translate technical terms to Chinese...\n- Use formal language in business contexts\n- Prefer simplified Chinese characters",
+    "glossaryDesc": "Add terms and their translations. The AI will use these as a reference when translating.",
+    "glossaryPlaceholder": "E.g.,\nAPI -> 应用程序接口\nFrontend -> 前端\nBackend -> 后端\nMachine Learning -> 机器学习"
   }
 }

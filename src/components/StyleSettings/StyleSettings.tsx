@@ -4,6 +4,7 @@ import { useAppStore } from '../../hooks/useAppStore';
 import './StyleSettings.css';
 
 const PRESET_STYLES = [
+  { value: 'unspecified', label: 'Unspecified' },
   { value: 'formal', label: 'Formal' },
   { value: 'casual', label: 'Casual' },
   { value: 'academic', label: 'Academic' },
@@ -13,14 +14,21 @@ const PRESET_STYLES = [
 
 export function StyleSettings() {
   const { t } = useTranslation();
-  const { style, setStyle, customStyle, setCustomStyle, isStreaming } = useAppStore();
+  const { style, setStyle, customStyle, setCustomStyle, isStreaming, settings, setSettings } = useAppStore();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const showCustomInput = style === 'custom' || customStyle;
 
+  const handleStyleChange = (newStyle: string) => {
+    setStyle(newStyle);
+    if (newStyle !== 'custom') {
+      setSettings({ defaultStyle: newStyle });
+    }
+  };
+
   return (
     <div className="style-settings">
-      <button 
+      <button
         className="style-toggle"
         onClick={() => setIsExpanded(!isExpanded)}
         aria-expanded={isExpanded}
@@ -40,7 +48,7 @@ export function StyleSettings() {
               <button
                 key={s.value}
                 className={`style-preset-btn ${style === s.value ? 'active' : ''}`}
-                onClick={() => setStyle(s.value)}
+                onClick={() => handleStyleChange(s.value)}
                 disabled={isStreaming}
               >
                 {t('styleSettings.' + s.value)}

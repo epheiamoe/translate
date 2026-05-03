@@ -160,6 +160,7 @@
   background: var(--color-bg-secondary);
   border-radius: var(--radius-lg);
   padding: var(--spacing-4);
+  animation: slideUp 0.3s ease-out;
 }
 
 .preview-label {
@@ -219,6 +220,7 @@
   background: var(--color-bg-secondary);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  animation: slideUp 0.3s ease-out;
 }
 
 .result-header {
@@ -233,6 +235,29 @@
 .result-label {
   font-size: var(--font-size-sm);
   font-weight: 500;
+}
+
+.result-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  background: transparent;
+  transition: all var(--transition-fast);
+}
+
+.icon-btn:hover {
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
 }
 
 .download-btn {
@@ -283,71 +308,4 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-.fullscreen-result {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--color-bg);
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  padding: var(--spacing-4);
-}
-
-.fullscreen-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: var(--spacing-4);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.fullscreen-header h3 {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  margin: 0;
-}
-
-.fullscreen-actions {
-  display: flex;
-  gap: var(--spacing-2);
-}
-
-.back-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-2) var(--spacing-3);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  transition: all var(--transition-fast);
-}
-
-.back-btn:hover {
-  background: var(--color-bg-tertiary);
-  border-color: var(--color-primary);
-}
-
-.fullscreen-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--spacing-4) 0;
-}
-
-.fullscreen-content .markdown-renderer {
-  height: 100%;
-}
-
-.fullscreen-content .plain-text-result {
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.8;
-  margin: 0;
 }

@@ -10,6 +10,7 @@
   justify-content: center;
   z-index: 2000;
   padding: var(--spacing-4);
+  animation: fadeIn 0.2s ease-out;
 }
 
 .style-customization {
@@ -22,6 +23,7 @@
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
 }
 
 .sc-header {

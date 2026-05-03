@@ -2,6 +2,8 @@
 
 Offline-first translation PWA application powered by LLM API.
 
+**Online Demo**: [moe-epheia-translate.pages.dev](https://moe-epheia-translate.pages.dev) | [translate.epheia.moe](https://translate.epheia.moe)
+
 ## Features
 
 - **Offline Support**: Full PWA capability with Service Worker caching
@@ -13,10 +15,14 @@ Offline-first translation PWA application powered by LLM API.
 - **Style Settings**: Choose from Formal, Casual, Academic, Literary, or custom styles
 - **History & Favorites**: All translations saved locally with IndexedDB
 - **Import/Export**: Backup and restore your history and settings
-- **Thinking Chain**: Display reasoning process for supported models (DeepSeek Reasoner)
-- **Responsive Design**: DeepL-style UI with mobile (vertical) and desktop (side-by-side) layouts
+- **Thinking Chain**: Display reasoning process for supported models
+- **Multi-Provider**: Built-in support for DeepSeek, OpenAI, Anthropic, Google Gemini, xAI Grok, Mistral AI, and Cohere
+- **Custom Prompts**: Edit system and user prompt templates directly in Settings with reset to defaults
+- **Thinking Mode**: Configurable toggle in Settings to enable/disable model reasoning output
+- **Token Cost Display**: Shows estimated cost per request based on model pricing
+- **Responsive Design**: Mobile and desktop layouts
 - **Customizable**: CSS variables for easy theming
-- **Custom Models**: Add your own model configurations with max context settings
+- **Custom Models/Providers**: Add your own provider configurations with custom models
 
 ## Development
 
@@ -68,26 +74,33 @@ npm run preview
 
 1. Open the app
 2. Click the Settings icon
-3. Enter your API Base URL (default: `https://api.deepseek.com/v1`)
-4. Enter your API Key
+3. Select your provider (DeepSeek, OpenAI, Anthropic, etc.)
+4. Enter your API Key for the selected provider
 5. Select your preferred model
 6. Click Save
 
-### Available Models
+### Available Providers
 
-- **DeepSeek Chat**: Standard chat model, fast responses (128K context)
-- **DeepSeek Reasoner**: Supports thinking chain display (128K context)
+- **DeepSeek**: V4 Flash, V4 Pro
+- **OpenAI**: GPT-5.5, GPT-5.5 Pro, GPT-5.4, GPT-5.4 Pro, GPT-5.4 Mini, GPT-5.4 Nano
+- **Anthropic**: Claude Opus 4.7, Opus 4.6, Sonnet 4.6, Haiku 4.5, Sonnet 4.5
+- **Google Gemini**: Gemini 3.1 Pro, 2.5 Pro, 3 Flash, 3.1 Flash Lite, 2.5 Flash, 2.5 Flash Lite
+- **xAI Grok**: Grok 4.3, 4.20 Reasoning, 4.20 Multi-Agent, 4.1 Fast Reasoning, 4.1 Fast
+- **Mistral AI**: Mistral Large, Medium, Codestral, Magistral Medium, Small
+- **Cohere**: Command A, Command R+, Command R, Command R 7B, Command Light
 
-### Adding Custom Models
+### Custom Prompts
+
+You can customize all system and user prompts directly from the Settings panel:
 
 1. Go to Settings
-2. Scroll to Custom Models
-3. Enter:
-   - Model name (e.g., "GPT-4o")
-   - Model ID (e.g., "gpt-4o")
-   - Max context size (e.g., "128000")
-   - Check "Supports Thinking" if applicable
-4. Click Add Model
+2. Scroll to "Prompt Templates"
+3. Edit any prompt template
+4. Click Save to apply, or Reset to restore defaults
+
+### Thinking Mode
+
+Toggle thinking mode in Settings to enable/disable model reasoning display. When enabled, supported models will show their internal thought process before the final response.
 
 ### Adding Custom Languages
 
@@ -124,6 +137,11 @@ For higher rate limits on URL fetching, add your Jina API key in Settings.
 │   │   ├── ModeSwitcher/
 │   │   ├── ModelSwitcher/
 │   │   ├── Settings/
+│   │   │   ├── Settings.tsx
+│   │   │   ├── Settings.css
+│   │   │   └── PromptSettings.tsx
+│   │   ├── ProviderSwitcher/
+│   │   ├── ModelSwitcher/
 │   │   ├── StyleSettings/
 │   │   ├── ThinkingChain/
 │   │   └── TranslationArea/
@@ -133,8 +151,9 @@ For higher rate limits on URL fetching, add your Jina API key in Settings.
 │   ├── lib/              # Core libraries
 │   │   ├── db.ts         # IndexedDB operations
 │   │   ├── llmClient.ts   # LLM API client
-│   │   └── prompts/      # Prompt templates
+│   │   └── prompts/      # Prompt templates and defaults
 │   │       ├── loadPrompts.ts
+│   │       ├── defaultPrompts.ts
 │   │       └── prompts.yaml
 │   ├── styles/           # Styles and docs
 │   │   ├── global.css    # CSS variables
@@ -172,13 +191,13 @@ See `src/styles/custom-docs.md` for full documentation.
 
 ### Prompt Templates
 
-Edit `src/lib/prompts/prompts.yaml` to customize:
+Edit prompt templates via the Settings UI or directly in `src/lib/prompts/prompts.yaml`:
 - System prompts for translation and parsing modes
+- User prompts for various modes
 - Style descriptions
 - Language detection prompt
 - Supported languages list
-- Model configurations
-- Document translation prompts (with completion markers)
+- Provider and model configurations
 
 ## Deployment
 

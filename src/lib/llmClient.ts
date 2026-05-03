@@ -4,11 +4,34 @@ export interface LLMResponse {
   error?: string;
 }
 
+export interface TokenUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
 export interface StreamCallbacks {
   onChunk: (text: string) => void;
   onThinking?: (text: string) => void;
-  onDone: () => void;
+  onDone: (usage?: TokenUsage) => void;
   onError: (error: Error) => void;
+}
+
+export interface StreamTranslateOptions {
+  apiBaseUrl: string;
+  apiKey: string;
+  model: string;
+  systemPrompt: string;
+  userPrompt: string;
+  supportsThinking: boolean;
+  callbacks: StreamCallbacks;
+  signal?: AbortSignal;
+}
+
+let lastTokenUsage: TokenUsage | undefined;
+
+export function getLastTokenUsage(): TokenUsage | undefined {
+  return lastTokenUsage;
 }
 
 function escapeJsonString(str: string): string {
@@ -20,17 +43,10 @@ function escapeJsonString(str: string): string {
     .replace(/\t/g, '\\t');
 }
 
-export async function streamTranslate(
-  apiBaseUrl: string,
-  apiKey: string,
-  model: string,
-  systemPrompt: string,
-  userPrompt: string,
-  supportsThinking: boolean,
-  callbacks: StreamCallbacks
-): Promise<void> {
+export async function streamTranslate(options: StreamTranslateOptions): Promise<void> {
+  const { apiBaseUrl, apiKey, model, systemPrompt, userPrompt, supportsThinking, callbacks, signal } = options;
   const url = `${apiBaseUrl}/chat/completions`;
-  
+
   const messages = [
     { role: 'system', content: systemPrompt },
     { role: 'user', content: userPrompt }
@@ -43,12 +59,22 @@ export async function streamTranslate(
   };
 
   if (supportsThinking) {
+    requestBody.reasoning_effort = 'high';
     requestBody.extra_body = {
       thinking: {
         type: 'enabled',
         budget_tokens: 1000
       }
     };
+  }
+
+  const abortController = new AbortController();
+  const effectiveSignal = signal || abortController.signal;
+
+  if (signal) {
+    signal.addEventListener('abort', () => {
+      abortController.abort();
+    });
   }
 
   try {
@@ -58,7 +84,8 @@ export async function streamTranslate(
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      signal: effectiveSignal
     });
 
     if (!response.ok) {
@@ -75,65 +102,76 @@ export async function streamTranslate(
     let buffer = '';
     let thinkingBuffer = '';
     let inThinkingBlock = false;
+    let lastUsage: TokenUsage | undefined;
 
     while (true) {
       const { done, value } = await reader.read();
-      
+
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
 
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      
-      if (!trimmedLine) {
-        continue;
-      }
-      
-      if (trimmedLine === 'data: [DONE]') {
-        callbacks.onDone();
-        return;
-      }
+      for (const line of lines) {
+        const trimmedLine = line.trim();
 
-      if (!trimmedLine.startsWith('data: ')) {
-        continue;
-      }
-
-      const jsonStr = trimmedLine.slice(6);
-
-      try {
-        const data = JSON.parse(jsonStr);
-        
-        if (supportsThinking && data.choices?.[0]?.delta?.thinking) {
-          inThinkingBlock = true;
-          thinkingBuffer += data.choices[0].delta.thinking;
-          callbacks.onThinking?.(thinkingBuffer);
-        } else if (data.choices?.[0]?.delta?.content) {
-          if (inThinkingBlock && callbacks.onThinking) {
-            callbacks.onThinking(thinkingBuffer);
-            inThinkingBlock = false;
-            thinkingBuffer = '';
-          }
-          callbacks.onChunk(data.choices[0].delta.content);
+        if (!trimmedLine) {
+          continue;
         }
-      } catch {
-        // Skip malformed JSON
+
+        if (trimmedLine === 'data: [DONE]') {
+          callbacks.onDone(lastUsage);
+          return;
+        }
+
+        if (!trimmedLine.startsWith('data: ')) {
+          continue;
+        }
+
+        const jsonStr = trimmedLine.slice(6);
+
+        try {
+          const data = JSON.parse(jsonStr);
+
+          if (data.usage) {
+            lastUsage = data.usage;
+            lastTokenUsage = data.usage;
+          }
+
+          if (supportsThinking && data.choices?.[0]?.delta?.reasoning_content) {
+            inThinkingBlock = true;
+            thinkingBuffer += data.choices[0].delta.reasoning_content;
+            callbacks.onThinking?.(thinkingBuffer);
+          } else if (data.choices?.[0]?.delta?.content) {
+            if (inThinkingBlock && callbacks.onThinking) {
+              callbacks.onThinking(thinkingBuffer);
+              inThinkingBlock = false;
+              thinkingBuffer = '';
+            }
+            callbacks.onChunk(data.choices[0].delta.content);
+          }
+        } catch {
+          // Skip malformed JSON
+        }
       }
     }
-    }
 
-    callbacks.onDone();
+    callbacks.onDone(lastUsage);
   } catch (error) {
-    callbacks.onError(error instanceof Error ? error : new Error(String(error)));
+    if ((error as Error).name === 'AbortError') {
+      callbacks.onError(new Error('Translation cancelled'));
+    } else {
+      callbacks.onError(error instanceof Error ? error : new Error(String(error)));
+    }
   }
 }
 
 export async function detectLanguage(
   apiBaseUrl: string,
   apiKey: string,
-  prompt: string
+  prompt: string,
+  model?: string
 ): Promise<string> {
   const url = `${apiBaseUrl}/chat/completions`;
   
@@ -144,7 +182,7 @@ export async function detectLanguage(
       'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model: model || 'deepseek-v4-flash',
       messages: [{ role: 'user', content: prompt }],
       stream: false
     })

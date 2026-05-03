@@ -40,13 +40,23 @@ system:
   doc_translation: |
     You are a professional translator. You will receive content in {{source_lang}} and translate it to {{target_lang}}.
     The user has requested the following style/tone: {{style}}
-    
+
     IMPORTANT RULES:
     1. Translate ALL paragraphs completely. Do NOT stop mid-paragraph.
     2. When you finish translating the ENTIRE document, you MUST end your response with the marker: <!-- TRANSLATION_END -->
     3. Do NOT say "Here is the translation" or any introduction. Start translating immediately.
     4. Keep the SAME markdown structure as the original. Translate headings, lists, and paragraphs, but do NOT translate content inside code blocks (between ``` markers).
     5. Preserve all markdown formatting symbols (#, -, *, >, etc.)
+
+  alternative_translation: |
+    You are a professional translator. The user will provide a text in {{source_lang}} and its existing translation to {{target_lang}}.
+    Please generate 3 different alternative translations while maintaining the same style/tone: {{style}}
+    Requirements:
+    - All 3 versions must be semantically consistent with the original text
+    - Expression styles must be noticeably different from each other
+    - Keep the same formal/casual/academic/literary tone as the original translation
+    - Use numbering format: 1. ... 2. ... 3. ...
+    - Only provide the 3 translations, nothing else
 
 detection_prompt: |
   Detect the language of this text and respond with only the ISO 639-1 language code:
@@ -86,6 +96,7 @@ styles:
   casual: "Use casual, conversational language appropriate for everyday communication."
   academic: "Use academic language with precise terminology, suitable for scholarly work."
   literary: "Use literary language with expressive elements, suitable for literary works."
+  unspecified: "Use contextually appropriate style. Analyze the text to determine whether formal, casual, academic, or literary tone best fits the content and target audience."
   custom: "{{custom_style}}"
 
 languages:
@@ -121,16 +132,292 @@ languages:
   hu: "Hungarian"
   bg: "Bulgarian"
 
-models:
-  deepseek-chat:
-    name: "DeepSeek Chat"
-    supports_thinking: false
+providers:
+  deepseek:
+    name: "DeepSeek"
+    is_built_in: true
+    base_url: "https://api.deepseek.com"
     api_type: "openai"
-    max_context: 128000
-  deepseek-reasoner:
-    name: "DeepSeek Reasoner"
-    supports_thinking: true
-    api_type: "openai"
-    max_context: 128000
+    models:
+      - id: "deepseek-v4-flash"
+        name: "DeepSeek V4 Flash"
+        supports_thinking: true
+        max_context: 1000000
+        max_output: 128000
+        pricing_input: 0.14
+        pricing_output: 0.28
+      - id: "deepseek-v4-pro"
+        name: "DeepSeek V4 Pro"
+        supports_thinking: true
+        max_context: 1000000
+        max_output: 128000
+        pricing_input: 0.435
+        pricing_output: 0.87
 
-custom_models: []
+  openai:
+    name: "OpenAI"
+    is_built_in: true
+    base_url: "https://api.openai.com/v1"
+    api_type: "openai"
+    models:
+      - id: "gpt-5.5"
+        name: "GPT-5.5 (Flagship)"
+        supports_thinking: false
+        max_context: 400000
+        max_output: 128000
+        pricing_input: 5
+        pricing_output: 30
+      - id: "gpt-5.5-pro"
+        name: "GPT-5.5 Pro (Ultra)"
+        supports_thinking: true
+        max_context: 400000
+        max_output: 128000
+        pricing_input: 30
+        pricing_output: 180
+      - id: "gpt-5.4"
+        name: "GPT-5.4 (Balanced)"
+        supports_thinking: false
+        max_context: 400000
+        max_output: 128000
+        pricing_input: 2.5
+        pricing_output: 15
+      - id: "gpt-5.4-pro"
+        name: "GPT-5.4 Pro (Enhanced)"
+        supports_thinking: true
+        max_context: 400000
+        max_output: 128000
+        pricing_input: 30
+        pricing_output: 180
+      - id: "gpt-5.4-mini"
+        name: "GPT-5.4 Mini (Budget)"
+        supports_thinking: false
+        max_context: 128000
+        max_output: 128000
+        pricing_input: 0.75
+        pricing_output: 4.5
+      - id: "gpt-5.4-nano"
+        name: "GPT-5.4 Nano (Low-cost)"
+        supports_thinking: false
+        max_context: 128000
+        max_output: 128000
+        pricing_input: 0.2
+        pricing_output: 1.25
+
+  anthropic:
+    name: "Anthropic"
+    is_built_in: true
+    base_url: "https://api.anthropic.com"
+    api_type: "anthropic"
+    models:
+      - id: "claude-opus-4-7"
+        name: "Claude Opus 4.7 (Flagship)"
+        supports_thinking: true
+        max_context: 1000000
+        max_output: 128000
+        pricing_input: 5
+        pricing_output: 25
+      - id: "claude-opus-4-6"
+        name: "Claude Opus 4.6 (Flagship)"
+        supports_thinking: true
+        max_context: 1000000
+        max_output: 128000
+        pricing_input: 5
+        pricing_output: 25
+      - id: "claude-sonnet-4-6"
+        name: "Claude Sonnet 4.6 (Balanced)"
+        supports_thinking: true
+        max_context: 1000000
+        max_output: 128000
+        pricing_input: 3
+        pricing_output: 15
+      - id: "claude-haiku-4-5"
+        name: "Claude Haiku 4.5 (Fast)"
+        supports_thinking: false
+        max_context: 200000
+        max_output: 128000
+        pricing_input: 1
+        pricing_output: 5
+      - id: "claude-sonnet-4-5"
+        name: "Claude Sonnet 4.5 (Balanced)"
+        supports_thinking: true
+        max_context: 200000
+        max_output: 128000
+        pricing_input: 3
+        pricing_output: 15
+
+  google:
+    name: "Google Gemini"
+    is_built_in: true
+    base_url: "https://generativelanguage.googleapis.com/v1beta"
+    api_type: "google"
+    models:
+      - id: "gemini-3.1-pro-preview"
+        name: "Gemini 3.1 Pro (Flagship)"
+        supports_thinking: false
+        max_context: 1000000
+        max_output: 64000
+        pricing_input: 2
+        pricing_output: 12
+      - id: "gemini-2.5-pro"
+        name: "Gemini 2.5 Pro (Reliable)"
+        supports_thinking: false
+        max_context: 1000000
+        max_output: 64000
+        pricing_input: 1.25
+        pricing_output: 10
+      - id: "gemini-3-flash-preview"
+        name: "Gemini 3 Flash (Balanced)"
+        supports_thinking: false
+        max_context: 1000000
+        max_output: 64000
+        pricing_input: 0.5
+        pricing_output: 3
+      - id: "gemini-3.1-flash-lite-preview"
+        name: "Gemini 3.1 Flash Lite (Fast)"
+        supports_thinking: false
+        max_context: 1000000
+        max_output: 64000
+        pricing_input: 0.25
+        pricing_output: 1.5
+      - id: "gemini-2.5-flash"
+        name: "Gemini 2.5 Flash (Daily)"
+        supports_thinking: false
+        max_context: 1000000
+        max_output: 64000
+        pricing_input: 0.3
+        pricing_output: 2.5
+      - id: "gemini-2.5-flash-lite"
+        name: "Gemini 2.5 Flash Lite (Budget)"
+        supports_thinking: false
+        max_context: 1000000
+        max_output: 64000
+        pricing_input: 0.1
+        pricing_output: 0.4
+
+  xai:
+    name: "xAI Grok"
+    is_built_in: true
+    base_url: "https://api.x.ai/v1"
+    api_type: "openai"
+    models:
+      - id: "grok-4.3"
+        name: "Grok 4.3 (Flagship)"
+        supports_thinking: false
+        max_context: 1000000
+        max_output: 128000
+        pricing_input: 1.25
+        pricing_output: 2.5
+      - id: "grok-4.20-0309-reasoning"
+        name: "Grok 4.20 Reasoning"
+        supports_thinking: true
+        max_context: 2000000
+        max_output: 128000
+        pricing_input: 1.25
+        pricing_output: 2.5
+      - id: "grok-4.20-multi-agent-0309"
+        name: "Grok 4.20 Multi-Agent"
+        supports_thinking: false
+        max_context: 2000000
+        max_output: 128000
+        pricing_input: 1.25
+        pricing_output: 2.5
+      - id: "grok-4-1-fast-reasoning"
+        name: "Grok 4.1 Fast Reasoning"
+        supports_thinking: true
+        max_context: 2000000
+        max_output: 128000
+        pricing_input: 0.2
+        pricing_output: 0.5
+      - id: "grok-4-1-fast-non-reasoning"
+        name: "Grok 4.1 Fast"
+        supports_thinking: false
+        max_context: 2000000
+        max_output: 128000
+        pricing_input: 0.2
+        pricing_output: 0.5
+
+  mistral:
+    name: "Mistral AI"
+    is_built_in: true
+    base_url: "https://api.mistral.ai/v1"
+    api_type: "openai"
+    models:
+      - id: "mistral-large-latest"
+        name: "Mistral Large (Flagship)"
+        supports_thinking: false
+        max_context: 256000
+        max_output: 128000
+        pricing_input: 2
+        pricing_output: 6
+      - id: "mistral-medium-latest"
+        name: "Mistral Medium (Balanced)"
+        supports_thinking: false
+        max_context: 256000
+        max_output: 128000
+        pricing_input: 0.4
+        pricing_output: 2
+      - id: "codestral-latest"
+        name: "Codestral (Code)"
+        supports_thinking: false
+        max_context: 256000
+        max_output: 128000
+        pricing_input: 0.3
+        pricing_output: 0.9
+      - id: "magistral-medium-latest"
+        name: "Magistral Medium (Advanced Reasoning)"
+        supports_thinking: true
+        max_context: 256000
+        max_output: 128000
+        pricing_input: 2
+        pricing_output: 5
+      - id: "mistral-small-latest"
+        name: "Mistral Small (Budget)"
+        supports_thinking: false
+        max_context: 128000
+        max_output: 128000
+        pricing_input: 0.1
+        pricing_output: 0.3
+
+  cohere:
+    name: "Cohere"
+    is_built_in: true
+    base_url: "https://api.cohere.com/v1"
+    api_type: "openai"
+    models:
+      - id: "command-a-03-2025"
+        name: "Command A (Flagship)"
+        supports_thinking: false
+        max_context: 256000
+        max_output: 8000
+        pricing_input: 2.5
+        pricing_output: 10
+      - id: "command-r-plus-08-2024"
+        name: "Command R+ (Enterprise)"
+        supports_thinking: false
+        max_context: 128000
+        max_output: 8000
+        pricing_input: 2.5
+        pricing_output: 10
+      - id: "command-r-03-2024"
+        name: "Command R (Balanced)"
+        supports_thinking: false
+        max_context: 128000
+        max_output: 8000
+        pricing_input: 0.5
+        pricing_output: 1.5
+      - id: "command-r7b-12-2024"
+        name: "Command R 7B (Fast)"
+        supports_thinking: false
+        max_context: 128000
+        max_output: 4000
+        pricing_input: 0.1
+        pricing_output: 0.3
+      - id: "command-light"
+        name: "Command Light (Budget)"
+        supports_thinking: false
+        max_context: 128000
+        max_output: 4000
+        pricing_input: 0.3
+        pricing_output: 0.6
+
+custom_providers: []

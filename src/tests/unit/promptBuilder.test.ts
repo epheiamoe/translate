@@ -5,7 +5,7 @@ import {
   buildDetectionPrompt,
   getLanguageName,
   getSupportedLanguages,
-  getSupportedModels
+  getBuiltInProviders
 } from '../../lib/prompts/loadPrompts';
 
 describe('Prompt Building', () => {
@@ -83,15 +83,15 @@ describe('Prompt Building', () => {
     });
   });
 
-  describe('getSupportedModels', () => {
-    it('should return models with their properties', () => {
-      const models = getSupportedModels();
-      
-      expect(models).toBeDefined();
-      expect(models['deepseek-chat']).toBeDefined();
-      expect(models['deepseek-chat'].name).toBe('DeepSeek Chat');
-      expect(models['deepseek-chat'].supports_thinking).toBe(false);
-      expect(models['deepseek-reasoner'].supports_thinking).toBe(true);
+  describe('getBuiltInProviders', () => {
+    it('should return providers with their models', () => {
+      const providers = getBuiltInProviders();
+
+      expect(providers).toBeDefined();
+      expect(providers['deepseek']).toBeDefined();
+      expect(providers['deepseek'].name).toBe('DeepSeek');
+      expect(providers['deepseek'].models.length).toBeGreaterThan(0);
+      expect(providers['deepseek'].models[0].name).toBeDefined();
     });
   });
 });

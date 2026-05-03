@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { 
-  saveTranslation, 
-  getAllHistory, 
-  getFavorites, 
+import {
+  saveTranslation,
+  getAllHistory,
+  getFavorites,
   toggleFavorite as dbToggleFavorite,
   deleteTranslation as dbDeleteTranslation,
   clearHistory as dbClearHistory,
@@ -16,10 +16,17 @@ import {
   CustomLanguage
 } from '../lib/db';
 
+export interface CustomProvider {
+  id: string;
+  name: string;
+  baseUrl: string;
+  apiKey?: string;
+  models: CustomModel[];
+}
+
 export interface CustomModel {
   id: string;
   name: string;
-  apiType: string;
   maxContext: number;
   supportsThinking: boolean;
 }
@@ -30,12 +37,15 @@ export interface AppSettings {
   defaultMode: 'translation' | 'parsing';
   defaultStyle: string;
   customStyle: string;
-  apiBaseUrl: string;
-  apiKey: string;
+  customInstructions: string;
+  glossary: string;
+  selectedProvider: string;
   selectedModel: string;
+  providerApiKeys: Record<string, string>;
   customLanguages: CustomLanguage[];
-  customModels: CustomModel[];
+  customProviders: CustomProvider[];
   jinaApiKey: string;
+  thinkingEnabled: boolean;
 }
 
 interface AppState {
@@ -53,16 +63,22 @@ interface AppState {
   showHistory: boolean;
   showSettings: boolean;
   settings: AppSettings;
-  
+  translationError: string;
+
   docSourceText: string;
   docTargetText: string;
   docSourceLang: string;
   docTargetLang: string;
   docIsStreaming: boolean;
   docProgress: string;
-  
+
   activeTab: 'translate' | 'explain' | 'doc';
-  
+
+  alternatives: string[];
+  showAlternatives: boolean;
+  isLoadingAlternatives: boolean;
+  originalTranslation: string;
+
   setSourceText: (text: string) => void;
   setTargetText: (text: string) => void;
   setSourceLang: (lang: string) => void;
@@ -76,7 +92,7 @@ interface AppState {
   setShowSettings: (show: boolean) => void;
   setSettings: (settings: Partial<AppSettings>) => void;
   setActiveTab: (tab: 'translate' | 'explain' | 'doc') => void;
-  
+
   setDocSourceText: (text: string) => void;
   setDocTargetText: (text: string) => void;
   setDocSourceLang: (lang: string) => void;
@@ -84,7 +100,13 @@ interface AppState {
   setDocIsStreaming: (streaming: boolean) => void;
   setDocProgress: (progress: string) => void;
   appendDocTargetText: (text: string) => void;
-  
+
+  setAlternatives: (alternatives: string[]) => void;
+  setShowAlternatives: (show: boolean) => void;
+  setIsLoadingAlternatives: (loading: boolean) => void;
+  setOriginalTranslation: (text: string) => void;
+  setTranslationError: (error: string) => void;
+
   loadHistory: () => Promise<void>;
   loadFavorites: () => Promise<void>;
   addToHistory: (record: Omit<TranslationRecord, 'id'>) => Promise<void>;
@@ -105,7 +127,7 @@ export const useAppStore = create<AppState>()(
       sourceLang: 'auto',
       targetLang: 'zh',
       mode: 'translation',
-      style: 'formal',
+      style: 'unspecified',
       customStyle: '',
       isStreaming: false,
       history: [],
@@ -117,14 +139,17 @@ export const useAppStore = create<AppState>()(
         defaultSourceLang: 'auto',
         defaultTargetLang: 'zh',
         defaultMode: 'translation',
-        defaultStyle: 'formal',
+        defaultStyle: 'unspecified',
         customStyle: '',
-        apiBaseUrl: 'https://api.deepseek.com/v1',
-        apiKey: '',
-        selectedModel: 'deepseek-chat',
+        customInstructions: '',
+        glossary: '',
+        selectedProvider: 'deepseek',
+        selectedModel: 'deepseek-v4-flash',
+        providerApiKeys: {},
         customLanguages: [],
-        customModels: [],
-        jinaApiKey: ''
+        customProviders: [],
+        jinaApiKey: '',
+        thinkingEnabled: false
       },
 
       docSourceText: '',
@@ -133,8 +158,14 @@ export const useAppStore = create<AppState>()(
       docTargetLang: 'zh',
       docIsStreaming: false,
       docProgress: '',
-      
+
       activeTab: 'translate',
+
+      alternatives: [],
+      showAlternatives: false,
+      isLoadingAlternatives: false,
+      originalTranslation: '',
+      translationError: '',
 
       setSourceText: (text) => set({ sourceText: text }),
       setTargetText: (text) => set({ targetText: text }),
@@ -158,9 +189,15 @@ export const useAppStore = create<AppState>()(
       setDocTargetLang: (lang) => set({ docTargetLang: lang }),
       setDocIsStreaming: (streaming) => set({ docIsStreaming: streaming }),
       setDocProgress: (progress) => set({ docProgress: progress }),
-      appendDocTargetText: (text) => set((state) => ({ 
-        docTargetText: state.docTargetText + text 
+      appendDocTargetText: (text) => set((state) => ({
+        docTargetText: state.docTargetText + text
       })),
+
+      setAlternatives: (alternatives) => set({ alternatives }),
+      setShowAlternatives: (show) => set({ showAlternatives: show }),
+      setIsLoadingAlternatives: (loading) => set({ isLoadingAlternatives: loading }),
+      setOriginalTranslation: (text: string) => set({ originalTranslation: text }),
+      setTranslationError: (error: string) => set({ translationError: error }),
 
       loadHistory: async () => {
         const history = await getAllHistory();
@@ -214,22 +251,30 @@ export const useAppStore = create<AppState>()(
         await saveSetting('defaultMode', settings.defaultMode);
         await saveSetting('defaultStyle', settings.defaultStyle);
         await saveSetting('customStyle', settings.customStyle);
-        await saveSetting('apiBaseUrl', settings.apiBaseUrl);
-        await saveSetting('apiKey', settings.apiKey);
+        await saveSetting('selectedProvider', settings.selectedProvider);
         await saveSetting('selectedModel', settings.selectedModel);
+        await saveSetting('providerApiKeys', settings.providerApiKeys);
         await saveSetting('customLanguages', settings.customLanguages);
-        await saveSetting('customModels', settings.customModels);
+        await saveSetting('customProviders', settings.customProviders);
         await saveSetting('jinaApiKey', settings.jinaApiKey);
+        await saveSetting('thinkingEnabled', settings.thinkingEnabled);
       },
 
       loadSettingsFromDb: async () => {
         const dbSettings = await getAllSettings();
         const currentSettings = get().settings;
+
+        const migratedSettings = {
+          ...currentSettings,
+          ...dbSettings,
+          customProviders: Array.isArray(dbSettings.customProviders) ? dbSettings.customProviders : [],
+          providerApiKeys: dbSettings.providerApiKeys || ((dbSettings as any).apiKey ? { deepseek: (dbSettings as any).apiKey } : {}),
+          selectedProvider: dbSettings.selectedProvider || 'deepseek',
+          selectedModel: dbSettings.selectedModel || 'deepseek-v4-flash'
+        };
+
         set({
-          settings: {
-            ...currentSettings,
-            ...dbSettings
-          },
+          settings: migratedSettings,
           sourceLang: (dbSettings.defaultSourceLang as string) || currentSettings.defaultSourceLang,
           targetLang: (dbSettings.defaultTargetLang as string) || currentSettings.defaultTargetLang,
           mode: (dbSettings.defaultMode as 'translation' | 'parsing') || currentSettings.defaultMode,
@@ -245,7 +290,25 @@ export const useAppStore = create<AppState>()(
       name: 'translate-app-storage',
       partialize: (state) => ({
         settings: state.settings
-      })
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state && state.settings) {
+          const settings = state.settings;
+          if (!Array.isArray(settings.customProviders)) {
+            settings.customProviders = [];
+          }
+          if (!settings.providerApiKeys || typeof settings.providerApiKeys !== 'object') {
+            const oldApiKey = (settings as any).apiKey;
+            settings.providerApiKeys = oldApiKey ? { deepseek: oldApiKey } : {};
+          }
+          if (!settings.selectedProvider) {
+            settings.selectedProvider = 'deepseek';
+          }
+          if (!settings.selectedModel) {
+            settings.selectedModel = 'deepseek-v4-flash';
+          }
+        }
+      }
     }
   )
 );

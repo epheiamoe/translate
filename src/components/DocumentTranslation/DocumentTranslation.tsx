@@ -7,8 +7,10 @@ import {
   buildUserPromptContinue,
   checkTranslationComplete,
   removeEndMarker,
-  getSupportedModels,
+  getBuiltInProviders,
+  getModelsForProvider,
   getSupportedLanguages,
+  resolveModelConfig,
   getModelMaxContext
 } from '../../lib/prompts/loadPrompts';
 import { streamTranslate } from '../../lib/llmClient';
@@ -93,7 +95,20 @@ export function DocumentTranslation() {
   const { t } = useTranslation();
 
   const languages = getSupportedLanguages();
-  const models = getSupportedModels();
+  const builtInProviders = getBuiltInProviders();
+  const customProviders = settings.customProviders || [];
+  const currentProviderModels = getModelsForProvider(settings.selectedProvider, customProviders);
+  const models = Object.fromEntries(
+    currentProviderModels.map(m => [m.id, { name: m.name, supports_thinking: m.supportsThinking }])
+  );
+
+  const getApiConfig = () => {
+    return resolveModelConfig(settings.selectedProvider, settings.selectedModel, customProviders);
+  };
+
+  const apiConfig = getApiConfig();
+  const providerApiKeys = settings.providerApiKeys || {};
+  const apiKey = apiConfig ? (providerApiKeys[settings.selectedProvider] || '') : '';
 
   const handleUrlFetch = async () => {
     if (!urlInput.trim()) return;
@@ -160,7 +175,7 @@ export function DocumentTranslation() {
   }, [setDocSourceText]);
 
   const handleTranslate = async () => {
-    if (!docSourceText.trim() || !settings.apiKey) return;
+    if (!docSourceText.trim() || !apiKey || !apiConfig) return;
     
     setDocTargetText('');
     setDocIsStreaming(true);
@@ -191,14 +206,14 @@ export function DocumentTranslation() {
       }
       
       await new Promise<void>((resolve, reject) => {
-        streamTranslate(
-          settings.apiBaseUrl,
-          settings.apiKey,
-          settings.selectedModel,
+        streamTranslate({
+          apiBaseUrl: apiConfig!.baseUrl,
+          apiKey: apiKey,
+          model: apiConfig!.modelId,
           systemPrompt,
           userPrompt,
-          models[settings.selectedModel]?.supports_thinking || false,
-          {
+          supportsThinking: apiConfig!.supportsThinking,
+          callbacks: {
             onChunk: (chunk) => {
               fullResponse += chunk;
               setDocTargetText(fullResponse);
@@ -210,7 +225,7 @@ export function DocumentTranslation() {
             },
             onError: (err) => reject(err)
           }
-        );
+        });
       });
     };
     
@@ -363,7 +378,7 @@ export function DocumentTranslation() {
           <button
             className="translate-doc-btn"
             onClick={handleTranslate}
-            disabled={docIsStreaming || !settings.apiKey || isTooLong}
+            disabled={docIsStreaming || !apiKey || isTooLong}
           >
             {docIsStreaming ? (
               <>
@@ -377,20 +392,58 @@ export function DocumentTranslation() {
         </>
       )}
 
-      {docProgress && (
-        <div className="progress-message">{docProgress}</div>
+      {showFullscreenResult && (
+        <div className="fullscreen-result-overlay">
+          <div className="fullscreen-result-header">
+            <button className="fullscreen-result-close" onClick={() => setShowFullscreenResult(false)}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+            </button>
+            <h3>{t('docTranslation.translationResult')}</h3>
+            <button className="download-btn" onClick={handleDownload}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              {t('docTranslation.download', { type: isMarkdown ? 'MD' : 'TXT' })}
+            </button>
+          </div>
+          <div className="fullscreen-result-content">
+            {docProgress && (
+              <div className="progress-message">{docProgress}</div>
+            )}
+            {docTargetText ? (
+              isMarkdown ? (
+                <MarkdownRenderer content={removeEndMarker(docTargetText)} />
+              ) : (
+                <pre className="plain-text-result">{removeEndMarker(docTargetText)}</pre>
+              )
+            ) : (
+              <div className="placeholder-text">{t('docTranslation.translating')}</div>
+            )}
+          </div>
+        </div>
       )}
 
-      {showFullscreenResult && docTargetText && (
-        <div className="fullscreen-result">
-          <div className="fullscreen-header">
-            <h3>{t('docTranslation.translationResult')}</h3>
-            <div className="fullscreen-actions">
-              <button className="back-btn" onClick={() => setShowFullscreenResult(false)}>
+      {!showFullscreenResult && docTargetText && (
+        <div className="doc-result">
+          <div className="result-header">
+            <span className="result-label">{t('docTranslation.result')}</span>
+            <div className="result-actions">
+              <button className="icon-btn" onClick={() => {
+                navigator.clipboard.writeText(removeEndMarker(docTargetText));
+              }} title={t('buttons.copy')}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M19 12H5M12 19l-7-7 7-7"/>
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                 </svg>
-                {t('docTranslation.back')}
+              </button>
+              <button className="icon-btn" onClick={() => setShowFullscreenResult(true)} title={t('buttons.fullscreen')}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                </svg>
               </button>
               <button className="download-btn" onClick={handleDownload}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -401,29 +454,6 @@ export function DocumentTranslation() {
                 {t('docTranslation.download', { type: isMarkdown ? 'MD' : 'TXT' })}
               </button>
             </div>
-          </div>
-          <div className="fullscreen-content">
-            {isMarkdown ? (
-              <MarkdownRenderer content={removeEndMarker(docTargetText)} />
-            ) : (
-              <pre className="plain-text-result">{removeEndMarker(docTargetText)}</pre>
-            )}
-          </div>
-        </div>
-      )}
-
-      {!showFullscreenResult && docTargetText && (
-        <div className="doc-result">
-          <div className="result-header">
-            <span className="result-label">{t('docTranslation.result')}</span>
-            <button className="download-btn" onClick={handleDownload}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              {t('docTranslation.download', { type: isMarkdown ? 'MD' : 'TXT' })}
-            </button>
           </div>
           <div className="result-content">
             {isMarkdown ? (

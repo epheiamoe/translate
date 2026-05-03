@@ -21,9 +21,16 @@ export interface CustomLanguage {
 export interface CustomModel {
   id: string;
   name: string;
-  apiType: string;
   maxContext: number;
   supportsThinking: boolean;
+}
+
+export interface CustomProvider {
+  id: string;
+  name: string;
+  baseUrl: string;
+  apiKey?: string;
+  models: CustomModel[];
 }
 
 export interface AppSettings {
@@ -32,18 +39,21 @@ export interface AppSettings {
   defaultMode: 'translation' | 'parsing';
   defaultStyle: string;
   customStyle: string;
-  apiBaseUrl: string;
-  apiKey: string;
+  customInstructions: string;
+  glossary: string;
+  selectedProvider: string;
   selectedModel: string;
+  providerApiKeys: Record<string, string>;
   customLanguages: CustomLanguage[];
-  customModels: CustomModel[];
+  customProviders: CustomProvider[];
   jinaApiKey: string;
   cssVariables?: Record<string, string>;
   customCSS?: string;
+  thinkingEnabled: boolean;
 }
 
 const DB_NAME = 'translate-pwa-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbInstance: IDBDatabase | null = null;
 
@@ -74,6 +84,10 @@ async function getDB(): Promise<IDBDatabase> {
 
       if (!db.objectStoreNames.contains('settings')) {
         db.createObjectStore('settings', { keyPath: 'key' });
+      }
+
+      if (!db.objectStoreNames.contains('tokenStats')) {
+        db.createObjectStore('tokenStats', { keyPath: 'key' });
       }
     };
   });
@@ -271,6 +285,33 @@ export async function getSetting<K extends keyof AppSettings>(
   });
 }
 
+export async function getRawSetting(key: string): Promise<unknown> {
+  const db = await getDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['settings'], 'readonly');
+    const store = transaction.objectStore('settings');
+    const request = store.get(key);
+    
+    request.onsuccess = () => {
+      const result = request.result;
+      resolve(result?.value);
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function saveRawSetting(key: string, value: unknown): Promise<void> {
+  const db = await getDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['settings'], 'readwrite');
+    const store = transaction.objectStore('settings');
+    const request = store.put({ key, value });
+    
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
 export async function getAllSettings(): Promise<Partial<AppSettings>> {
   const db = await getDB();
   return new Promise((resolve, reject) => {
@@ -319,4 +360,97 @@ export async function importData(jsonString: string): Promise<void> {
       await saveSetting(key as keyof AppSettings, value as AppSettings[keyof AppSettings]);
     }
   }
+}
+
+export interface TokenStats {
+  totalTokens: number;
+  monthlyTokens: number;
+  lastResetDate: string;
+}
+
+function getCurrentMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export async function getTokenStats(): Promise<TokenStats> {
+  const db = await getDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['tokenStats'], 'readonly');
+    const store = transaction.objectStore('tokenStats');
+    const request = store.get('stats');
+    
+    request.onsuccess = () => {
+      const result = request.result as TokenStats | undefined;
+      const currentMonth = getCurrentMonth();
+      
+      if (result) {
+        if (result.lastResetDate !== currentMonth) {
+          const newStats: TokenStats = {
+            totalTokens: result.totalTokens + result.monthlyTokens,
+            monthlyTokens: 0,
+            lastResetDate: currentMonth
+          };
+          resolve(newStats);
+        } else {
+          resolve(result);
+        }
+      } else {
+        resolve({
+          totalTokens: 0,
+          monthlyTokens: 0,
+          lastResetDate: currentMonth
+        });
+      }
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function addTokenUsage(tokens: number): Promise<TokenStats> {
+  const db = await getDB();
+  const currentStats = await getTokenStats();
+  const currentMonth = getCurrentMonth();
+  
+  const newStats: TokenStats = {
+    totalTokens: currentStats.totalTokens + tokens,
+    monthlyTokens: currentStats.monthlyTokens + tokens,
+    lastResetDate: currentMonth
+  };
+  
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['tokenStats'], 'readwrite');
+    const store = transaction.objectStore('tokenStats');
+    const request = store.put({ key: 'stats', ...newStats });
+    
+    request.onsuccess = () => resolve(newStats);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function getLastUsage(): Promise<number | null> {
+  const db = await getDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['tokenStats'], 'readonly');
+    const store = transaction.objectStore('tokenStats');
+    const request = store.get('lastUsage');
+    
+    request.onsuccess = () => {
+      const result = request.result as { value: number } | undefined;
+      resolve(result?.value ?? null);
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function setLastUsage(tokens: number): Promise<void> {
+  const db = await getDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['tokenStats'], 'readwrite');
+    const store = transaction.objectStore('tokenStats');
+    const request = store.put({ key: 'lastUsage', value: tokens });
+    
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
 }

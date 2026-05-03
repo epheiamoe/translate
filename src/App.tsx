@@ -1,18 +1,19 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from './hooks/useAppStore';
 import { useTranslation as useTranslate } from './hooks/useTranslation';
-import { getSupportedLanguages, getSupportedModels, removeEndMarker } from './lib/prompts/loadPrompts';
-import { getSetting } from './lib/db';
+import { getSupportedLanguages, getBuiltInProviders, getModelsForProvider, removeEndMarker, loadPromptsFromDB, getModelConfig } from './lib/prompts/loadPrompts';
+import { getSetting, getTokenStats, getLastUsage, TokenStats } from './lib/db';
 import { TranslationArea } from './components/TranslationArea/TranslationArea';
 import { LanguageSelector } from './components/LanguageSelector/LanguageSelector';
 import { StyleSettings } from './components/StyleSettings/StyleSettings';
 import { ModelSwitcher } from './components/ModelSwitcher/ModelSwitcher';
+import { ProviderSwitcher } from './components/ProviderSwitcher/ProviderSwitcher';
 import { HistoryPanel } from './components/HistoryPanel/HistoryPanel';
-import { ThinkingChain } from './components/ThinkingChain/ThinkingChain';
 import { Settings } from './components/Settings/Settings';
 import { DocumentTranslation } from './components/DocumentTranslation';
 import { StyleCustomization } from './components/StyleCustomization/StyleCustomization';
+import { CustomInstructions } from './components/CustomInstructions/CustomInstructions';
 import { MarkdownRenderer } from './components/MarkdownRenderer';
 import './styles/global.css';
 import './App.css';
@@ -36,25 +37,70 @@ function App() {
     loadFavorites,
     loadSettingsFromDb,
     activeTab,
-    setActiveTab
+    setActiveTab,
+    alternatives,
+    showAlternatives,
+    isLoadingAlternatives,
+    setShowAlternatives,
+    setTargetText,
+    originalTranslation,
+    translationError
   } = useAppStore();
 
-  const { translate } = useTranslate();
+  const { translate, fetchAlternatives, stopTranslation } = useTranslate();
   const { t } = useTranslation();
-  
+
+  const safeSettings = {
+    ...settings,
+    customProviders: Array.isArray(settings.customProviders) ? settings.customProviders : [],
+    providerApiKeys: settings.providerApiKeys && typeof settings.providerApiKeys === 'object' ? settings.providerApiKeys : {},
+    selectedProvider: settings.selectedProvider || 'deepseek',
+    selectedModel: settings.selectedModel || 'deepseek-v4-flash'
+  };
+
+  useEffect(() => {
+    if (!Array.isArray(safeSettings.customProviders) || Object.keys(safeSettings.providerApiKeys || {}).length === 0) {
+      loadSettingsFromDb();
+    }
+  }, []);
+
   const TABS = [
     { id: 'translate' as const, label: t('tabs.translate') },
     { id: 'explain' as const, label: t('tabs.explain') },
     { id: 'doc' as const, label: t('tabs.docTranslate') }
   ];
-  
+
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showStyleCustomization, setShowStyleCustomization] = useState(false);
+  const [showCustomInstructions, setShowCustomInstructions] = useState(false);
+  const [showFullscreenResult, setShowFullscreenResult] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [tokenStats, setTokenStats] = useState<TokenStats | null>(null);
+  const [lastTokenUsage, setLastTokenUsage] = useState<number | null>(null);
+  const [renderMarkdown, setRenderMarkdown] = useState(activeTab === 'explain');
   const languages = getSupportedLanguages();
-  const models = getSupportedModels();
-  
-  const touchStartX = useRef<number>(0);
-  const touchEndX = useRef<number>(0);
+
+  const builtInProviders = getBuiltInProviders();
+  const customProviders = safeSettings.customProviders;
+  const allProviders = [
+    ...Object.entries(builtInProviders).map(([id, p]) => ({
+      id,
+      name: p.name,
+      isBuiltIn: true
+    })),
+    ...customProviders.map(p => ({
+      id: p.id,
+      name: p.name,
+      isBuiltIn: false
+    }))
+  ];
+
+  const currentProviderModels = getModelsForProvider(safeSettings.selectedProvider, customProviders);
+  const models = Object.fromEntries(
+    currentProviderModels.map(m => [m.id, { name: m.name, supports_thinking: m.supportsThinking }])
+  );
+
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -75,6 +121,18 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.more-menu-container')) {
+        setShowMoreMenu(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    loadPromptsFromDB();
     loadSettingsFromDb();
     loadHistory();
     loadFavorites();
@@ -108,6 +166,7 @@ function App() {
       }
     };
     loadSavedStyles();
+    getLastUsage().then(setLastTokenUsage);
   }, []);
 
   const handleTabChange = (tab: 'translate' | 'explain' | 'doc') => {
@@ -119,33 +178,11 @@ function App() {
     }
   };
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-  }, []);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    touchEndX.current = e.touches[0].clientX;
-  }, []);
-
-  const handleTouchEnd = useCallback(() => {
-    const diff = touchStartX.current - touchEndX.current;
-    const threshold = 50;
-    
-    if (Math.abs(diff) > threshold) {
-      const currentIndex = TABS.findIndex(t => t.id === activeTab);
-      
-      if (diff > 0 && currentIndex < TABS.length - 1) {
-        setActiveTab(TABS[currentIndex + 1].id);
-      } else if (diff < 0 && currentIndex > 0) {
-        setActiveTab(TABS[currentIndex - 1].id);
-      }
-    }
-  }, [activeTab, setActiveTab]);
-
   const handleSwapLanguages = () => {
     if (sourceLang !== 'auto') {
+      const temp = sourceLang;
       setSourceLang(targetLang);
-      setTargetLang(sourceLang);
+      setTargetLang(temp);
     }
   };
 
@@ -165,7 +202,17 @@ function App() {
     }
   };
 
-  const showThinking = thinkingContent && models[settings.selectedModel]?.supports_thinking;
+  const showThinking = thinkingContent && settings.thinkingEnabled !== false;
+  const [thinkingCollapsed, setThinkingCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (!isStreaming && thinkingContent) {
+      setThinkingCollapsed(true);
+    }
+    if (isStreaming && thinkingContent) {
+      setThinkingCollapsed(false);
+    }
+  }, [isStreaming, thinkingContent]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -178,9 +225,6 @@ function App() {
           <main 
           ref={containerRef}
           className={`app-main ${isMobile ? 'mobile' : 'desktop'}`}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
         >
           <div className="translation-container">
             <div className="translation-panel source-panel">
@@ -192,6 +236,18 @@ function App() {
                   languages={languages}
                   showAutoOption={true}
                 />
+                {isMobile && (
+                  <button 
+                    className="icon-btn swap-btn-inline"
+                    onClick={handleSwapLanguages}
+                    disabled={isStreaming}
+                    aria-label={t('buttons.swap')}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+                    </svg>
+                  </button>
+                )}
                 <button 
                   className="icon-btn paste-btn"
                   onClick={handlePaste}
@@ -213,16 +269,18 @@ function App() {
               <StyleSettings />
             </div>
 
-            <button 
-              className="swap-btn"
-              onClick={handleSwapLanguages}
-              disabled={sourceLang === 'auto' || isStreaming}
-              aria-label={t('buttons.swap')}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
-              </svg>
-            </button>
+            {!isMobile && (
+              <button 
+                className="swap-btn"
+                onClick={handleSwapLanguages}
+                disabled={isStreaming}
+                aria-label={t('buttons.swap')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+                </svg>
+              </button>
+            )}
 
             <div className="translation-panel target-panel">
               <div className="panel-header">
@@ -244,14 +302,36 @@ function App() {
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                   </svg>
                 </button>
+                <button 
+                  className="icon-btn fullscreen-btn"
+                  onClick={() => setShowFullscreenResult(true)}
+                  aria-label={t('buttons.fullscreen')}
+                  disabled={!useAppStore.getState().targetText}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                  </svg>
+                </button>
+                <button 
+                  className={`icon-btn ${renderMarkdown ? 'active' : ''}`}
+                  onClick={() => setRenderMarkdown(!renderMarkdown)}
+                  aria-label={t('buttons.toggleMarkdown')}
+                  title={t('buttons.toggleMarkdown')}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 4h16v16H4z"/>
+                    <path d="M4 9h16"/>
+                    <path d="M9 20V9"/>
+                  </svg>
+                </button>
               </div>
-              {activeTab === 'explain' ? (
+              {renderMarkdown ? (
                 <div className="target-result markdown-result">
                   {useAppStore.getState().targetText ? (
                     <MarkdownRenderer content={removeEndMarker(useAppStore.getState().targetText)} />
                   ) : (
                     <div className="placeholder-text">
-                      {t('explain.resultPlaceholder')}
+                      {activeTab === 'explain' ? t('explain.resultPlaceholder') : t('translation.resultPlaceholder')}
                     </div>
                   )}
                 </div>
@@ -259,28 +339,158 @@ function App() {
                 <TranslationArea
                   value={useAppStore.getState().targetText}
                   onChange={() => {}}
-                  placeholder={t('translation.resultPlaceholder')}
+                  placeholder={activeTab === 'explain' ? t('explain.resultPlaceholder') : t('translation.resultPlaceholder')}
                   disabled={true}
                   readOnly={true}
                 />
               )}
               {showThinking && (
-                <ThinkingChain content={thinkingContent} />
+                <div className="thinking-inline">
+                  {isStreaming ? (
+                    <>
+                      <div className="thinking-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12.983 21.186a1 1 0 0 1-1.966 0 10 10 0 0 0-8.203-8.203 1 1 0 0 1 0-1.966 10 10 0 0 0 8.203-8.203 1 1 0 0 1 1.966 0 10 10 0 0 0 8.203 8.203 1 1 0 0 1 0 1.966 10 10 0 0 0-8.203 8.203"/>
+                        </svg>
+                        <span>{t('thinkingChain.title')}</span>
+                      </div>
+                      <pre className="thinking-content">{thinkingContent}</pre>
+                    </>
+                  ) : (
+                    <button
+                      className="thinking-collapsed-btn"
+                      onClick={() => setThinkingCollapsed(!thinkingCollapsed)}
+                    >
+                      <span className="thinking-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12.983 21.186a1 1 0 0 1-1.966 0 10 10 0 0 0-8.203-8.203 1 1 0 0 1 0-1.966 10 10 0 0 0 8.203-8.203 1 1 0 0 1 1.966 0 10 10 0 0 0 8.203 8.203 1 1 0 0 1 0 1.966 10 10 0 0 0-8.203 8.203"/>
+                        </svg>
+                      </span>
+                      <span>{thinkingCollapsed ? t('thinkingChain.view') || 'View thinking' : t('thinkingChain.hide') || 'Hide thinking'}</span>
+                      <svg className={`thinking-arrow ${thinkingCollapsed ? '' : 'expanded'}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="6 9 12 15 18 9"/>
+                      </svg>
+                    </button>
+                  )}
+                  {!thinkingCollapsed && !isStreaming && (
+                    <pre className="thinking-content">{thinkingContent}</pre>
+                  )}
+                </div>
               )}
-              <button 
-                className="translate-btn"
+              <button
                 onClick={translate}
-                disabled={!useAppStore.getState().sourceText.trim() || isStreaming || !settings.apiKey}
+                disabled={!useAppStore.getState().sourceText.trim() || !safeSettings.providerApiKeys[safeSettings.selectedProvider]}
+                className={isStreaming ? 'translate-btn is-streaming' : 'translate-btn'}
               >
-                {isStreaming ? (
-                  <>
-                    <span className="spinner"></span>
-                    {activeTab === 'explain' ? t('explain.explaining') : t('translation.translating')}
-                  </>
-                ) : (
-                  activeTab === 'explain' ? t('explain.explain') : t('translation.translate')
-                )}
+                <span className="btn-content">
+                  {isStreaming && <span className="spinner"></span>}
+                  <span className="btn-text">
+                    {isStreaming
+                      ? (activeTab === 'explain' ? t('explain.explaining') : t('translation.translating'))
+                      : (activeTab === 'explain' ? t('explain.explain') : t('translation.translate'))
+                    }
+                  </span>
+                </span>
+                <span className="stop-indicator" onClick={(e) => { e.stopPropagation(); stopTranslation(); }}></span>
               </button>
+              {translationError && (
+                <div className="translation-error">
+                  {translationError}
+                </div>
+              )}
+              {lastTokenUsage && !isStreaming && (
+                <div className="token-usage-badge">
+                  {(() => {
+                    const modelCfg = getModelConfig(safeSettings.selectedModel);
+                    const tokens = lastTokenUsage;
+                    let cost = '';
+                    if (modelCfg?.pricing_input && modelCfg?.pricing_output) {
+                      const inputCost = (tokens * 0.5 / 1_000_000) * modelCfg.pricing_input;
+                      const outputCost = (tokens * 0.5 / 1_000_000) * modelCfg.pricing_output;
+                      cost = ` ~$${(inputCost + outputCost).toFixed(6)}`;
+                    }
+                    return `${tokens.toLocaleString()} tokens${cost}`;
+                  })()}
+                </div>
+              )}
+              {!showAlternatives && !isStreaming && useAppStore.getState().targetText && (
+                <button
+                  className="show-alternatives-btn"
+                  onClick={() => {
+                    if (alternatives.length > 0) {
+                      setShowAlternatives(true);
+                    } else {
+                      fetchAlternatives();
+                    }
+                  }}
+                >
+                  {t('translation.showAlternatives')}
+                </button>
+              )}
+              {isLoadingAlternatives && (
+                <div className="alternatives-loading">
+                  <span className="spinner"></span>
+                  {t('translation.loadingAlternatives')}
+                  <button
+                    className="alternatives-stop-btn"
+                    onClick={stopTranslation}
+                    aria-label={t('translation.stop')}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="6" y="6" width="12" height="12" rx="1"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
+              {showAlternatives && alternatives.length > 0 && (
+                <div className="alternatives-container">
+                  <div className="alternatives-header">
+                    <span>{t('translation.alternativesLabel')}</span>
+                    <div className="alternatives-actions">
+                      <button
+                        className="alternatives-regenerate"
+                        onClick={fetchAlternatives}
+                        disabled={isLoadingAlternatives}
+                        title={t('translation.regenerateAlternatives')}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M23 4v6h-6M1 20v-6h6"/>
+                          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                      </button>
+                      <button
+                        className="alternatives-close"
+                        onClick={() => setShowAlternatives(false)}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="alternatives-list">
+                    {originalTranslation && (
+                      <div
+                        className="alternative-item current"
+                        onClick={() => setTargetText(originalTranslation)}
+                      >
+                        <span className="alternative-number">1.</span>
+                        <span className="alternative-text">{originalTranslation}</span>
+                      </div>
+                    )}
+                    {alternatives.map((alt, i) => (
+                      <div
+                        key={i}
+                        className="alternative-item"
+                        onClick={() => setTargetText(alt)}
+                      >
+                        <span className="alternative-number">{(originalTranslation ? 1 : 0) + i + 1}.</span>
+                        <span className="alternative-text" data-full={alt}>{alt}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </main>
@@ -288,51 +498,146 @@ function App() {
     }
   };
 
+  const targetText = useAppStore.getState().targetText;
+
   return (
-    <div className="app">
+<div className="app">
       <header className="app-header">
-        <h1 className="app-title">{t('app.title')}</h1>
         <div className="header-actions">
-          <ModelSwitcher 
-            currentModel={settings.selectedModel}
-            models={Object.fromEntries(
-              Object.entries(models).map(([key, model]) => [
-                key,
-                { name: model.name, supports_thinking: model.supports_thinking }
-              ])
-            )}
+          <ProviderSwitcher
+            currentProvider={safeSettings.selectedProvider}
+            providers={allProviders}
+            onSelect={(providerId) => {
+              const newModels = getModelsForProvider(providerId, customProviders);
+              const newModel = newModels.length > 0 ? newModels[0].id : '';
+              useAppStore.getState().setSettings({
+                selectedProvider: providerId,
+                selectedModel: newModel
+              });
+            }}
+          />
+          <ModelSwitcher
+            currentModel={safeSettings.selectedModel}
+            models={models}
             onSelect={(model) => useAppStore.getState().setSettings({ selectedModel: model })}
           />
-          <button 
-            className="header-btn"
-            onClick={() => setShowHistory(!showHistory)}
-            aria-label={t('history.title')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12,6 12,12 16,14"/>
-            </svg>
-          </button>
-          <button 
-            className="header-btn"
-            onClick={() => setShowSettings(!showSettings)}
-            aria-label={t('settings.title')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-            </svg>
-          </button>
-          <button 
-            className="header-btn"
-            onClick={() => setShowStyleCustomization(true)}
-            aria-label={t('styleCustomization.title')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="5"/>
-              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-            </svg>
-          </button>
+          {isMobile ? (
+            <div className="more-menu-container">
+              <button
+                className="header-btn"
+                onClick={() => setShowMoreMenu(!showMoreMenu)}
+                aria-label={t('common.more')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="5" cy="12" r="2"/>
+                  <circle cx="12" cy="12" r="2"/>
+                  <circle cx="19" cy="12" r="2"/>
+                </svg>
+              </button>
+              {showMoreMenu && (
+                <div className="more-dropdown">
+                  <button className="more-dropdown-item" onClick={() => { setShowHistory(!showHistory); setShowMoreMenu(false); }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12,6 12,12 16,14"/>
+                    </svg>
+                    <span>{t('history.title')}</span>
+                  </button>
+                  <button className="more-dropdown-item" onClick={async () => { try { const stats = await getTokenStats(); setTokenStats(stats); setShowStats(true); } catch (e) { console.error('Failed to load token stats:', e); } setShowMoreMenu(false); }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 20V10M12 20V4M6 20v-6"/>
+                    </svg>
+                    <span>{t('tokenStats.title')}</span>
+                  </button>
+                  <button className="more-dropdown-item" onClick={() => { setShowSettings(!showSettings); setShowMoreMenu(false); }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="3"/>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    <span>{t('settings.title')}</span>
+                  </button>
+                  <button className="more-dropdown-item" onClick={() => { setShowStyleCustomization(true); setShowMoreMenu(false); }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="5"/>
+                      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                    <span>{t('styleCustomization.title')}</span>
+                  </button>
+                  <button className="more-dropdown-item" onClick={() => { setShowCustomInstructions(true); setShowMoreMenu(false); }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                      <line x1="16" y1="13" x2="8" y2="13"/>
+                      <line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
+                    <span>{t('customInstructions.title')}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <button 
+                className="header-btn"
+                onClick={() => setShowHistory(!showHistory)}
+                aria-label={t('history.title')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12,6 12,12 16,14"/>
+                </svg>
+              </button>
+              <button 
+                className="header-btn"
+                onClick={async () => {
+                  try {
+                    const stats = await getTokenStats();
+                    setTokenStats(stats);
+                    setShowStats(true);
+                  } catch (e) {
+                    console.error('Failed to load token stats:', e);
+                  }
+                }}
+                aria-label={t('tokenStats.title')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 20V10M12 20V4M6 20v-6"/>
+                </svg>
+              </button>
+              <button 
+                className="header-btn"
+                onClick={() => setShowSettings(!showSettings)}
+                aria-label={t('settings.title')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+              </button>
+              <button 
+                className="header-btn"
+                onClick={() => setShowStyleCustomization(true)}
+                aria-label={t('styleCustomization.title')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="5"/>
+                  <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
+              </button>
+              <button 
+                className="header-btn"
+                onClick={() => setShowCustomInstructions(true)}
+                aria-label={t('customInstructions.title')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+              </button>
+            </>
+          )}
         </div>
       </header>
 
@@ -365,7 +670,56 @@ function App() {
         <StyleCustomization onClose={() => setShowStyleCustomization(false)} />
       )}
 
-      {!settings.apiKey && (
+      {showCustomInstructions && (
+        <CustomInstructions onClose={() => setShowCustomInstructions(false)} />
+      )}
+
+      {showFullscreenResult && targetText && (
+        <div className="fullscreen-result-overlay">
+          <div className="fullscreen-result-header">
+            <button className="fullscreen-result-close" onClick={() => setShowFullscreenResult(false)}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+            </button>
+            <h3>{activeTab === 'explain' ? t('explain.title') : t('translation.result')}</h3>
+          </div>
+          <div className="fullscreen-result-content">
+            {activeTab === 'explain' ? (
+              <MarkdownRenderer content={removeEndMarker(targetText)} />
+            ) : (
+              <pre className="plain-text-result">{removeEndMarker(targetText)}</pre>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showStats && tokenStats && (
+        <div className="stats-modal-overlay" onClick={() => setShowStats(false)}>
+          <div className="stats-modal" onClick={e => e.stopPropagation()}>
+            <div className="stats-modal-header">
+              <h3>{t('tokenStats.title')}</h3>
+              <button className="icon-btn" onClick={() => setShowStats(false)}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+            <div className="stats-modal-content">
+              <div className="stats-item">
+                <span className="stats-label">{t('tokenStats.total')}</span>
+                <span className="stats-value">{tokenStats.totalTokens.toLocaleString()}</span>
+              </div>
+              <div className="stats-item">
+                <span className="stats-label">{t('tokenStats.monthly')}</span>
+                <span className="stats-value">{tokenStats.monthlyTokens.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!safeSettings.providerApiKeys[safeSettings.selectedProvider] && (
         <div className="api-key-warning">
           <p>{t('warnings.apiKeyNeeded')}</p>
           <button onClick={() => setShowSettings(true)}>{t('warnings.openSettings')}</button>

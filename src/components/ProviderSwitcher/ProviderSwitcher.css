@@ -1,0 +1,28 @@
+.provider-switcher {
+  display: flex;
+  align-items: center;
+}
+
+.provider-select {
+  padding: var(--spacing-2) var(--spacing-3);
+  padding-right: var(--spacing-6);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+.provider-select:hover {
+  border-color: var(--color-primary);
+}
+
+.provider-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(15, 48, 224, 0.1);
+}
