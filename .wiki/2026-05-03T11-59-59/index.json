@@ -1,0 +1,192 @@
+{
+  "sections": [
+    {
+      "name": "入门指南",
+      "topics": [
+        {
+          "level": "初学",
+          "title": "概览",
+          "description": "Moe Translate 是一款离线优先的翻译 PWA 应用，通过 LLM API 提供流式翻译、语言解析、文档翻译等功能。涵盖 25+ 语言、多种翻译风格、思考链展示和自定义提示词。",
+          "task": "阅读 README.md 和 package.json，提炼项目定位与技术栈。先概述核心价值（离线优先、LLM 驱动、PWA），然后以 Data Flow 图展示用户输入到 LLM 返回的完整链路。列出所有内置 LLM 提供商（DeepSeek、OpenAI、Anthropic、Google、xAI、Mistral、Cohere）并用表格对比。最后点明读者可从中学到的架构模式（Zustand 持久化、IndexedDB 封装、流式 API 客户端、YAML 驱动提示词系统）。"
+        },
+        {
+          "level": "初学",
+          "title": "快速开始",
+          "description": "5 分钟上手 Moe Translate：安装依赖、启动开发服务器、配置 API Key、完成首次翻译。",
+          "task": "按步骤写出完整流程：1) `npm install` 2) `npm run dev` 3) 打开浏览器进入设置面板 4) 填入 DeepSeek API Base URL 和 API Key 5) 选择模型 6) 输入源文本 7) 点击翻译按钮。每一步都配代码块或截图描述。在步骤 3 中补充说明如何从设置面板访问 ProviderSwitcher、ModelSwitcher 和 API Key 输入框。最后给出 `npm run build` 构建生产版本并访问 `dist/` 目录的说明。"
+        },
+        {
+          "level": "初学",
+          "title": "PWA 安装与离线使用",
+          "description": "将 Moe Translate 安装为桌面/移动端 PWA 应用，并了解其离线缓存策略。",
+          "task": "讲解 PWA 的三大要素：manifest.webmanifest（图标、显示模式、作用域）、Service Worker（workbox 自动缓存策略）、注册过程（registerSW.js）。说明 vite-plugin-pwa 的配置位于 vite.config.ts，包括 runtimeCaching 中的 Google Fonts 缓存。给出在 Chrome/Edge 中点击地址栏安装按钮的步骤，并演示飞行模式下如何查看历史翻译记录。提醒用户 Service Worker 仅缓存静态资源，翻译请求仍需网络。"
+        },
+        {
+          "level": "初学",
+          "title": "界面导览与核心操作",
+          "description": "全面了解 Moe Translate 的用户界面布局——翻译/解释切换、语言选择器、提供商切换、模型切换、样式设置和历史面板。",
+          "task": "基于 App.tsx 的 JSX 结构和组件的 props 传递，逐一介绍以下 UI 区域：顶部 Header（ProviderSwitcher、ModelSwitcher、历史/统计/设置/样式/自定义指令按钮）、Tab 导航（翻译/解释/文档翻译）、翻译面板（源语言选择器 + TranslationArea + 粘贴按钮、目标语言选择器 + 复制/全屏/Markdown 切换按钮 + 思考链折叠区）、底部翻译按钮和 Token 消耗统计。用标注图或列表呈现每个元素的位置与功能。"
+        },
+        {
+          "type": "group",
+          "title": "配置指南"
+        },
+        {
+          "level": "初学",
+          "title": "API 密钥与提供商配置",
+          "description": "配置 LLM API 密钥、选择提供商和模型，包括内置提供商（DeepSeek、OpenAI 等）的完整列表与定价信息。",
+          "task": "基于 prompts.yaml 中的 providers 字段和 Settings.tsx 组件，列出所有内置提供商的 baseUrl、api_type 和模型列表（含 max_context、pricing_input/pricing_output）。说明 ProviderSwitcher 如何切换提供商并自动加载对应模型列表，providerApiKeys 以 Record<string, string> 存储于 Zustand 和 IndexedDB。给出 DeepSeek 和 OpenAI 两个典型配置示例。解释自定义提供商（CustomProvider）的添加界面：输入名称和 baseUrl，然后手动添加模型 ID。"
+        },
+        {
+          "level": "中级",
+          "title": "翻译模式与解释模式详解",
+          "description": "深入理解 Moe Translate 的三种工作模式：翻译模式、解释模式和文档翻译模式，及其对应的系统提示词策略。",
+          "task": "基于 useTranslation.ts 中的 translate 函数和 loadPrompts.ts 中的 buildSystemPrompt/buildUserPrompt，说明三种模式的核心差异：1) 翻译模式下 system prompt 要求\"仅输出翻译\"，user prompt 为简单指令；2) 解释模式（parsing）要求 LLM 以目标语言返回单词释义、音标、词性、例句；3) 文档翻译模式使用 translation_long 提示词，需要以 <!-- TRANSLATION_END --> 标记结束。引用 prompts.yaml 中各模式的实际 prompt 模板。展示 App.tsx 中 handleTabChange 如何联动 setMode 和 activeTab。"
+        },
+        {
+          "level": "中级",
+          "title": "语言检测与自定义语言",
+          "description": "了解自动语言检测的工作原理，以及如何添加不受内置语言列表支持的自定义语言。",
+          "task": "阅读 llmClient.ts 中的 detectLanguage 函数：它发送非流式请求到 LLM，要求返回 ISO 639-1 语言代码。loadPrompts.ts 中的 buildDetectionPrompt 和 prompts.yaml 中的 detection_prompt 展示了 prompts.yaml 中定义的语言映射表（30 种语言）。讲解 Settings.tsx 中自定义语言的添加界面：用户输入名称和 promptSuffix，这些自定义语言将被注入到 getSupportedLanguages() 的返回结果中。说明自定义语言在构建 prompt 时如何替换 {{source_lang}} 和 {{target_lang}} 占位符。"
+        },
+        {
+          "level": "中级",
+          "title": "翻译风格与自定义指令",
+          "description": "配置翻译输出的语气风格（正式/休闲/学术/文学/自定义），以及添加自定义指令和术语表以约束 LLM 输出。",
+          "task": "基于 prompts.yaml 中的 styles 字段和 loadPrompts.ts 中 buildSystemPrompt 函数的风格替换逻辑，说明五种内置风格各自的 prompt 描述。重点讲解 StyleSettings 组件如何与 App.tsx 联动：style 字段通过 useAppStore.setStyle 存储，翻译时传递给 buildSystemPrompt。CustomInstructions 组件允许用户输入自定义指令和术语表（glossary），两者在 buildSystemPrompt 的末尾附加到 system prompt 中。给出一个实际示例：用 \"用简单的词汇，适合初中生阅读\" 作为自定义风格。"
+        }
+      ]
+    },
+    {
+      "name": "深入探索",
+      "topics": [
+        {
+          "type": "group",
+          "title": "架构与核心模块"
+        },
+        {
+          "level": "中级",
+          "title": "项目结构与模块依赖图",
+          "description": "Moe Translate 的完整目录结构分析，核心模块间的依赖关系与数据流梳理。",
+          "task": "基于 README.md 中的 Project Structure 和实际目录树，绘制模块依赖图。标注三个核心层：UI 层（src/components/ 下的 12 个组件目录）、状态层（src/hooks/useAppStore.ts + useTranslation.ts）、数据层（src/lib/db.ts + llmClient.ts + prompts/）。详细说明 main.tsx -> App.tsx -> 各组件的渲染链路。在 App.tsx 中标注所有 hooks 调用位置（useAppStore、useTranslation、useTranslation from i18n）。强调 Zustand persist 中间件如何将 settings 子集同步到 localStorage。"
+        },
+        {
+          "level": "高级",
+          "title": "状态管理：Zustand 与持久化策略",
+          "description": "深入分析 useAppStore 的定义，包括 Zustand persist 中间件的 partialize 配置、onRehydrateStorage 数据迁移逻辑，以及与 IndexedDB 的双重持久化策略。",
+          "task": "详细拆解 useAppStore.ts：1) 分析 create<AppState>()(persist(...)) 的结构，说明 partialize 如何仅将 settings 持久化到 localStorage 2) onRehydrateStorage 中处理旧版本数据结构迁移（老 apiKey -> providerApiKeys）3) 列出所有状态字段（30+）和对应的 setter 函数 4) 对比两种持久化：Zustand 的 localStorage（settings 子集，用于快速恢复）vs IndexedDB（完整设置和历史记录，用于离线持久化）5) 说明 loadSettingsFromDb 在 App 的 useEffect 中被调用，如何合并 DB 设置到 Zustand 状态。引用 db.ts 中的 saveSetting/getSetting 和 getAllSettings 函数。"
+        },
+        {
+          "level": "高级",
+          "title": "IndexedDB 数据层设计",
+          "description": "分析 IndexedDB 数据库 schema（history、settings、tokenStats 三个 object store），CRUD 操作封装，历史记录自动清理策略与数据导入导出机制。",
+          "task": "阅读 db.ts 完整代码，按主题组织：1) 数据库初始化（DB_NAME='translate-pwa-db', DB_VERSION=2, onupgradeneeded 创建三个 store）2) history store：TranslationRecord 类型、timestamp 和 isFavorite 索引、自动清理（MAX_RECORDS=1000, MAX_DAYS=30，保留收藏记录）3) settings store：key-value 模式，saveSetting/getSetting 泛型函数 4) tokenStats store：月度统计、自动重置逻辑 5) 数据导入导出（exportData/importData 序列化为 JSON）6) 所有函数都用 Promise 封装，使用 IDBDatabase 单例模式。说明 App.tsx 的 useEffect 中 loadHistory、loadFavorites、loadSettingsFromDb 的调用时机。"
+        },
+        {
+          "level": "高级",
+          "title": "LLM 流式 API 客户端架构",
+          "description": "详细分析 streamTranslate 函数的设计，包括 SSE 流解析、思考链（reasoning_content）处理、AbortController 取消机制、自动语言检测和 Token 用量追踪。",
+          "task": "逐行分析 llmClient.ts 中的 streamTranslate 函数：1) 请求体构建（model、messages、stream:true、可选 reasoning_effort 和 extra_body）2) Fetch API 的 Response.body.getReader() 逐 chunk 读取 3) TextDecoder 解码 + buffer 分行 4) SSE 格式解析（data: 前缀、[DONE] 标记）5) 思考链处理：supportsThinking 模式下监听 reasoning_content 字段并通过 callbacks.onThinking 回调 6) TokenUsage 追踪（data.usage 字段）7) AbortController 双信号桥接（外部 signal 绑定到内部 controller）8) detectLanguage 函数的非流式请求设计。关联 useTranslation.ts 中 translate 函数如何调用 streamTranslate 并组装 callbacks。"
+        },
+        {
+          "type": "group",
+          "title": "提示词与模板系统"
+        },
+        {
+          "level": "高级",
+          "title": "YAML 驱动的提示词引擎",
+          "description": "剖析以 prompts.yaml 为核心的提示词管理系统，包括模板变量替换（{{source_lang}} 等）、多模式 system/user prompt 构建、运行时热加载与持久化覆盖。",
+          "task": "全面分析 src/lib/prompts/ 目录的三个文件：1) prompts.yaml：定义 system 和 user 各 5 类 prompt、styles 映射、languages 映射、providers 配置（7 个提供商 25+ 模型）、custom_providers 占位 2) loadPrompts.ts：YAML parse 缓存（cachedConfig）、loadPromptsFromDB 从 IndexedDB 加载用户自定义覆盖、buildSystemPrompt 执行变量替换（{{source_lang}}、{{target_lang}}、{{style}}）、buildUserPrompt 同理、resolveModelConfig 查找提供商-模型组合、getModelsForProvider、getModelConfig（含 pricing） 3) defaultPrompts.ts：作为 YAML 加载失败的降级方案。说明 TRANSLATION_END_MARKER 标记在文档翻译和长文本翻译中的截断检测作用。"
+        },
+        {
+          "level": "高级",
+          "title": "长文本与文档翻译的分段策略",
+          "description": "解析长文本翻译和文档翻译的分段续写机制：TRANSLATION_END_MARKER 检测、maxContinuations 循环续写、代码块保护与 Markdown 结构保持。",
+          "task": "基于 DocumentTranslation.tsx 中的 handleTranslate 函数，分析长文本翻译的核心策略：1) parseMarkdown 将文档分为 text 和 code 两类 block（代码块用 ``` 保护）2) 首次翻译调用 buildDocUserPrompt/buidDocSystemPrompt 3) 通过 checkTranslationComplete（检测 <!-- TRANSLATION_END -->）判断是否完成 4) 未完成则循环调用 tryTranslate（最多 10 次续写），使用 buildUserPromptContinue 传递上次末尾 50 字符 5) removeEndMarker 清理末尾标记 6) 预估 Token 数（字符数 / 3.5）与模型 maxContext 比较，超出则警告。同时说明 URL 获取功能（通过 r.jina.ai 将 URL 转为 Markdown）的 Jina API 配置。"
+        },
+        {
+          "type": "group",
+          "title": "组件与 UI 体系"
+        },
+        {
+          "level": "中级",
+          "title": "翻译组件：TranslationArea 与 MarkdownRenderer",
+          "description": "TranslationArea 封装了 textarea 与 label，支持受控和非受控模式；MarkdownRenderer 使用 react-markdown 和 remark-gfm 渲染 Markdown 结果。",
+          "task": "分析 TranslationArea.tsx：forwardRef 的设计、textarea HTML 属性透传（通过 TextareaHTMLAttributes 接口）、CSS 模块化样式。分析 MarkdownRenderer 组件（假设它使用 react-markdown + remark-gfm）。在 App.tsx 中跟踪 renderMarkdown 状态的切换逻辑，说明 Markdown 渲染模式在解释模式下默认启用。讲解两个 TranslationArea 实例分别作为源文本输入和目标文本输出（readOnly）的区别。特别说明 target-panel 中 Markdown 渲染和纯文本渲染的条件切换。"
+        },
+        {
+          "level": "中级",
+          "title": "ProviderSwitcher 与 ModelSwitcher 联动机制",
+          "description": "分析 ProviderSwitcher 切换提供商时如何联动更新 ModelSwitcher 中的模型列表，以及自定义提供商和模型的动态注册。",
+          "task": "基于 App.tsx 中 ProviderSwitcher 的 onSelect 回调：1) 调用 getModelsForProvider(providerId, customProviders) 获取模型列表 2) 默认选择第一个模型 3) 通过 setSettings 同时更新 selectedProvider 和 selectedModel。ModelSwitcher 显示当前模型的 supports_thinking 标识和 maxContext。ProviderSwitcher 合并内置提供商和自定义提供商列表（allProviders 数组）。在 Settings.tsx 中跟踪自定义提供商和模型的添加/删除逻辑，说明 providerApiKeys 如何在切换提供商时保持独立密钥。"
+        },
+        {
+          "level": "中级",
+          "title": "历史面板与数据管理",
+          "description": "HistoryPanel 展示翻译历史和收藏，支持搜索、收藏/取消收藏、删除、导出/导入全部数据。",
+          "task": "分析 HistoryPanel 组件（约 200 行）：1) 从 useAppStore 获取 history 和 favorites 列表 2) 本地搜索过滤（filter by sourceText）3) 收藏切换调用 toggleFavorite 4) 删除调用 deleteRecord 5) 导出调用 exportData 生成 JSON 下载 6) 导入调用 importData 解析 JSON 文件 7) 清空全部调用 clearHistory。关联 App.tsx 中 showHistory 状态控制面板显示。说明 TranslationRecord 接口中 timestamp 排序和 isFavorite 标记的作用。"
+        },
+        {
+          "level": "中级",
+          "title": "思考链（Thinking Chain）展示组件",
+          "description": "分析 ThinkingChain 组件如何在支持 reasoning 的模型（如 DeepSeek Reasoner）中显示 LLM 的推理过程，包括流式实时更新和折叠/展开交互。",
+          "task": "在 App.tsx 和 useTranslation.ts 中追踪 thinkingContent 的数据流：1) llmClient.ts 的 streamTranslate 在 supportsThinking 模式下接收 reasoning_content delta 2) 通过 callbacks.onThinking 实时推送 3) useAppStore.setThinkingContent 更新全局状态 4) App.tsx 的 showThinking 条件判断（thinkingContent 存在 && settings.thinkingEnabled !== false）5) 流式翻译中自动展开、翻译完成后自动折叠 6) 思考链 UI 包含图标、标题、预格式化内容（pre.thinking-content）。说明 ThinkingChain 组件的 props 和内部状态管理。强调只有配置了 supportsThinking: true 的模型才会触发 reasoning_content 请求体（extra_body.thinking）。"
+        },
+        {
+          "level": "中级",
+          "title": "替代翻译（Alternatives）功能",
+          "description": "分析 Alternatives 功能如何通过独立 API 调用生成 3 个不同风格的翻译版本，并允许用户在版本间切换。",
+          "task": "在 useTranslation.ts 中追踪 fetchAlternatives 函数：1) 构建 alternative_system_prompt（要求生成 3 个不同版本）2) 调用 streamTranslate（关闭 supportsThinking）3) 通过 parseAlternatives 解析编号格式（1. ... 2. ... 3. ...）4) 将原始翻译存入 originalTranslation 5) 列表展示所有版本，用户点击后通过 setTargetText 切换。在 App.tsx 中跟踪 showAlternatives 和 alternatives 状态，注意 isLoadingAlternatives 和停止按钮的 UI 状态。引用 prompts.yaml 中的 alternative_translation prompt 模板。"
+        },
+        {
+          "type": "group",
+          "title": "国际化与样式定制"
+        },
+        {
+          "level": "中级",
+          "title": "国际化（i18n）架构",
+          "description": "Moe Translate 使用 react-i18next 实现中英文双语界面，包括语言自动检测、localStorage 持久化、翻译键值管理和语言切换 API。",
+          "task": "分析 src/i18n/index.ts：1) i18next + react-i18next 初始化 2) 语言检测优先级：localStorage > navigator.language > 'en' 3) 设置 document.documentElement.lang 4) 暴露 changeLanguage 和 getCurrentLanguage 函数。对比中英文 JSON 文件（zh.json 含约 40 个翻译键）。在 App.tsx 和 Settings.tsx 中追踪 t() 函数调用模式，说明占位符插值。给出添加新语言所需的步骤：1) 创建新的 JSON 文件 2) 在 i18n/index.ts 注册资源 3) 使用 t() 替换硬编码字符串。"
+        },
+        {
+          "level": "中级",
+          "title": "CSS 变量主题系统与样式自定义",
+          "description": "Moe Translate 使用 CSS 自定义属性实现主题系统，支持 StyleCustomization 组件实时预览、深色模式切换和自定义 CSS 注入。",
+          "task": "分析 src/styles/global.css 中定义的 40+ CSS 变量（颜色、排版、间距、圆角、阴影、过渡、z-index）。说明 [data-theme='dark'] 选择器如何切换深色主题变量。在 App.tsx 中追踪样式加载逻辑：1) useEffect 中从 IndexedDB 读取 cssVariables 和 customCSS 2) cssVariables 通过 document.documentElement.style.setProperty 应用 3) customCSS 通过创建 #custom-user-styles 的 style 元素注入。StyleCustomization 组件中的预设选择器（presets）和高级 CSS 编辑器。引用 custom-docs.md 作为内置文档。"
+        },
+        {
+          "type": "group",
+          "title": "工程化与测试"
+        },
+        {
+          "level": "中级",
+          "title": "构建工具链与配置",
+          "description": "从 Vite 配置到 TypeScript 编译，再到 PWA 插件集成，了解完整的构建管线。",
+          "task": "分析 vite.config.ts：1) @vitejs/plugin-react 启用 JSX 编译 2) vite-plugin-pwa 配置 manifest 图标和 workbox 运行时缓存 3) build.rollupOptions 中 manualChunks 设置为 undefined。分析 tsconfig.json 和 tsconfig.node.json 的模块解析策略。分析 vitest.config.ts：jsdom 测试环境、setupFiles 指向 src/tests/setup.ts。列出所有 npm scripts（dev、build、preview、test、test:run、typecheck）并说明各自用途。强调 `tsc -b && vite build` 的先类型检查后构建的执行顺序。"
+        },
+        {
+          "level": "中级",
+          "title": "测试体系：Vitest 与 Testing Library",
+          "description": "分析 Moe Translate 的测试配置、IndexedDB mock 策略以及现有单元测试的结构与写法。",
+          "task": "分析 vitest.config.ts 配置（globals: true, environment: jsdom, setupFiles）。拆解 src/tests/setup.ts 中的 IndexedDB mock 实现：模拟 open() 方法及其 onsuccess/onerror/onupgradeneeded 回调、objectStore 的 CRUD 方法（getAll、get、add、put、delete、clear）。阅读 db.test.ts：三个 describe 块分别测试 TranslationRecord、CustomLanguage、AppSettings 的类型定义。说明如何扩展测试覆盖 llmClient.ts、loadPrompts.ts 和 useTranslation.ts。推荐使用 @testing-library/react 编写组件集成测试。"
+        },
+        {
+          "type": "group",
+          "title": "部署与运维"
+        },
+        {
+          "level": "中级",
+          "title": "Cloudflare Pages 部署指南",
+          "description": "将 Moe Translate 部署到 Cloudflare Pages，包括构建配置、路由规则、安全标头和自定义域名设置。",
+          "task": "基于 public/_headers 和 public/_routes.json，说明 Cloudflare Pages 部署的三个关键文件：1) _headers 定义安全标头（X-Frame-Options、X-Content-Type-Options、Referrer-Policy、Permissions-Policy）和缓存策略 2) _routes.json 定义 SPA 路由重写（所有路径回退到 index.html）3) PWA manifest 和 Service Worker 的路径。给出 Cloudflare Pages 控制面板中的配置步骤：构建命令 `npm run build`、输出目录 `dist`、环境变量设置。提醒用户注意 API 密钥安全（客户端环境无法隐藏 API 密钥，建议使用 Cloudflare Workers 代理请求）。"
+        },
+        {
+          "level": "中级",
+          "title": "离线策略与性能优化",
+          "description": "分析 Workbox 的缓存策略、PWA 离线体验优化、Token 消耗追踪以及已知的 Token 计数估算问题。",
+          "task": "基于 vite.config.ts 中 VitePWA 插件的 workbox 配置：1) globPatterns 缓存所有静态资源（js、css、html、icon、svg、woff2）2) runtimeCaching 为 Google Fonts 使用 CacheFirst 策略（365 天过期）3) registerType: 'autoUpdate' 确保 Service Worker 自动更新。讨论离线体验的限制：翻译请求需要网络，离线时仅历史记录可查看。分析 TokenStats 系统（db.ts 中的 getTokenStats/addTokenUsage/getLastUsage/setLastUsage）如何按月统计 Token 消耗。说明已知的 Token 估算问题（字符数 / 3.5 的粗略估算）和 TODO 中计划实现的 tiktoken 集成方案。"
+        }
+      ]
+    }
+  ]
+}

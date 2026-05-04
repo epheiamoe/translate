@@ -6,12 +6,22 @@ import './MarkdownRenderer.css';
 interface MarkdownRendererProps {
   content: string;
   className?: string;
+  onLinkClick?: (url: string) => void;
 }
 
-export function MarkdownRenderer({ content, className = '' }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content, className = '', onLinkClick }: MarkdownRendererProps) {
   return (
     <div className={`markdown-renderer ${className}`}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={onLinkClick ? {
+          a: ({ href, children }) => (
+            <a href={href} onClick={(e) => { e.preventDefault(); if (href) onLinkClick(href); }}>
+              {children}
+            </a>
+          )
+        } : undefined}
+      >
         {content}
       </ReactMarkdown>
     </div>

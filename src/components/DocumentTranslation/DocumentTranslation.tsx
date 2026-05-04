@@ -91,6 +91,12 @@ export function DocumentTranslation() {
   const [urlError, setUrlError] = useState('');
   const [isMarkdown, setIsMarkdown] = useState(false);
   const [showFullscreenResult, setShowFullscreenResult] = useState(false);
+  const [isFromUrl, setIsFromUrl] = useState(false);
+  const [originalDocUrl, setOriginalDocUrl] = useState('');
+  const [dialogUrl, setDialogUrl] = useState('');
+  const [showUrlDialog, setShowUrlDialog] = useState(false);
+  const [translatingUrl, setTranslatingUrl] = useState(false);
+  const [urlTranslateError, setUrlTranslateError] = useState('');
 
   const { t } = useTranslation();
 
@@ -110,15 +116,16 @@ export function DocumentTranslation() {
   const providerApiKeys = settings.providerApiKeys || {};
   const apiKey = apiConfig ? (providerApiKeys[settings.selectedProvider] || '') : '';
 
-  const handleUrlFetch = async () => {
-    if (!urlInput.trim()) return;
+  const handleUrlFetch = async (url?: string) => {
+    const targetUrl = (url || urlInput).trim();
+    if (!targetUrl) return;
     
     setIsLoadingUrl(true);
     setUrlError('');
     setDocTargetText('');
+    setUrlTranslateError('');
     
     try {
-      const targetUrl = urlInput.trim();
       const encodedUrl = encodeURIComponent(targetUrl);
       const fetchUrl = `https://r.jina.ai/${encodedUrl}`;
       console.log('Fetching URL:', fetchUrl);
@@ -145,12 +152,13 @@ export function DocumentTranslation() {
       const content = data.data?.content || data.content || '';
       
       if (!content) {
-        setUrlError('Failed to extract content from response');
-        return;
+        throw new Error('Failed to extract content from response');
       }
       
       setDocSourceText(content);
       setIsMarkdown(true);
+      setIsFromUrl(true);
+      setOriginalDocUrl(targetUrl);
     } catch (err) {
       setUrlError(err instanceof Error ? err.message : 'Failed to fetch URL');
     } finally {
@@ -254,6 +262,47 @@ export function DocumentTranslation() {
     }
   };
 
+  const handleLinkClick = (href: string) => {
+    if (!isFromUrl || !originalDocUrl) return;
+    try {
+      const resolved = new URL(href, originalDocUrl).href;
+      setDialogUrl(resolved);
+      setShowUrlDialog(true);
+      setUrlTranslateError('');
+    } catch {
+      window.open(href, '_blank');
+    }
+  };
+
+  const handleTranslateUrl = async () => {
+    if (!dialogUrl) return;
+    setTranslatingUrl(true);
+    setUrlTranslateError('');
+    try {
+      const encodedUrl = encodeURIComponent(dialogUrl);
+      const fetchUrl = `https://r.jina.ai/${encodedUrl}`;
+      const headers: Record<string, string> = { 'Accept': 'application/json' };
+      if (settings.jinaApiKey) {
+        headers['Authorization'] = `Bearer ${settings.jinaApiKey}`;
+      }
+      const response = await fetch(fetchUrl, { method: 'GET', headers });
+      if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
+      const data = await response.json();
+      const content = data.data?.content || data.content || '';
+      if (!content) throw new Error('Failed to extract content from response');
+      setDocSourceText(content);
+      setOriginalDocUrl(dialogUrl);
+      setShowUrlDialog(false);
+      setDocTargetText('');
+      setDocProgress('');
+      handleTranslate();
+    } catch (err) {
+      setUrlTranslateError(err instanceof Error ? err.message : 'Failed to translate URL');
+    } finally {
+      setTranslatingUrl(false);
+    }
+  };
+
   const handleDownload = () => {
     const content = removeEndMarker(docTargetText);
     const mimeType = isMarkdown ? 'text/markdown' : 'text/plain';
@@ -289,10 +338,10 @@ export function DocumentTranslation() {
             onChange={(e) => setUrlInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleUrlFetch()}
           />
-          <button 
-            className="fetch-btn"
-            onClick={handleUrlFetch}
-            disabled={isLoadingUrl || !urlInput.trim()}
+            <button 
+              className="fetch-btn"
+              onClick={() => handleUrlFetch()}
+              disabled={isLoadingUrl || !urlInput.trim()}
           >
             {isLoadingUrl ? t('docTranslation.fetching') : t('docTranslation.fetch')}
           </button>
@@ -395,7 +444,7 @@ export function DocumentTranslation() {
       {showFullscreenResult && (
         <div className="fullscreen-result-overlay">
           <div className="fullscreen-result-header">
-            <button className="fullscreen-result-close" onClick={() => setShowFullscreenResult(false)}>
+            <button className="fullscreen-result-close" onClick={() => { setShowFullscreenResult(false); setShowUrlDialog(false); }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M19 12H5M12 19l-7-7 7-7"/>
               </svg>
@@ -416,7 +465,7 @@ export function DocumentTranslation() {
             )}
             {docTargetText ? (
               isMarkdown ? (
-                <MarkdownRenderer content={removeEndMarker(docTargetText)} />
+                <MarkdownRenderer content={removeEndMarker(docTargetText)} onLinkClick={handleLinkClick} />
               ) : (
                 <pre className="plain-text-result">{removeEndMarker(docTargetText)}</pre>
               )
@@ -424,6 +473,32 @@ export function DocumentTranslation() {
               <div className="placeholder-text">{t('docTranslation.translating')}</div>
             )}
           </div>
+          {showUrlDialog && (
+            <div className="url-dialog-overlay" onClick={() => setShowUrlDialog(false)}>
+              <div className="url-dialog" onClick={e => e.stopPropagation()}>
+                <h3>{t('docTranslation.translateUrlTitle') || 'Link clicked'}</h3>
+                <p className="url-dialog-desc">{t('docTranslation.translateUrlDesc') || 'What do you want to do with this link?'}</p>
+                <p className="url-dialog-href">{dialogUrl}</p>
+                {translatingUrl && (
+                  <div className="url-dialog-status">{t('docTranslation.translatingUrl') || 'Fetching and translating...'}</div>
+                )}
+                {urlTranslateError && (
+                  <div className="url-dialog-error">{t('docTranslation.urlTranslateError', { message: urlTranslateError })}</div>
+                )}
+                <div className="url-dialog-actions">
+                  <button className="url-dialog-btn primary" onClick={handleTranslateUrl} disabled={translatingUrl || docIsStreaming}>
+                    {t('docTranslation.translateUrl') || 'Translate this page'}
+                  </button>
+                  <button className="url-dialog-btn secondary" onClick={() => { window.open(dialogUrl, '_blank'); setShowUrlDialog(false); }}>
+                    {t('docTranslation.openUrl') || 'Open original URL'}
+                  </button>
+                  <button className="url-dialog-btn" onClick={() => setShowUrlDialog(false)}>
+                    {t('settings.cancel')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

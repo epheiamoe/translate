@@ -101,7 +101,14 @@
     "complete": "Translation complete!",
     "incomplete": "Translation incomplete, continuing... ({{current}}/{{max}})",
     "warning": "Warning: Translation may be incomplete. Output was truncated.",
-    "error": "Error: {{message}}"
+    "error": "Error: {{message}}",
+    "translateUrlTitle": "Link clicked",
+    "translateUrlDesc": "What do you want to do with this link?",
+    "translateUrl": "Translate this page",
+    "openUrl": "Open original URL",
+    "translatingUrl": "Fetching and translating...",
+    "urlTranslateError": "Failed to translate: {{message}}",
+    "starting": "Starting translation..."
   },
   "history": {
     "title": "History",

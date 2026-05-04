@@ -101,7 +101,14 @@
     "complete": "翻译完成！",
     "incomplete": "翻译未完成，继续中...（{{current}}/{{max}}）",
     "warning": "警告：翻译可能不完整。输出已被截断。",
-    "error": "错误：{{message}}"
+    "error": "错误：{{message}}",
+    "translateUrlTitle": "链接已点击",
+    "translateUrlDesc": "你希望如何处理这个链接？",
+    "translateUrl": "翻译此页面",
+    "openUrl": "打开原始链接",
+    "translatingUrl": "正在获取并翻译此页面...",
+    "urlTranslateError": "翻译失败：{{message}}",
+    "starting": "开始翻译..."
   },
   "history": {
     "title": "历史记录",
