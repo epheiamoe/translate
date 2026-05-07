@@ -550,7 +550,7 @@ export function buildAlternativeUserPrompt(
   const langName = prompts.languages[sourceLang] || sourceLang;
   const targetLangName = prompts.languages[targetLang] || targetLang;
 
-  return `Original ${langName} text:\n${sourceText}\n\nExisting ${targetLangName} translation:\n${firstTranslation}`;
+  return `<user_content>\nOriginal ${langName} text:\n${sourceText}\n</user_content>\n\n<user_content>\nExisting ${targetLangName} translation:\n${firstTranslation}\n</user_content>`;
 }
 
 export function parseAlternatives(response: string): string[] {

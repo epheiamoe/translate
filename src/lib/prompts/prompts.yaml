@@ -60,25 +60,33 @@ system:
 
 detection_prompt: |
   Detect the language of this text and respond with only the ISO 639-1 language code:
-  "{{text}}"
+  <user_content>
+  {{text}}
+  </user_content>
 
 user:
   translation: |
     Translate this {{source_lang}} text to {{target_lang}}:
+    <user_content>
     {{text}}
+    </user_content>
 
   translation_long: |
     Translate the following {{source_lang}} text to {{target_lang}}. Remember to end with <!-- TRANSLATION_END --> when complete:
+    <user_content>
     {{text}}
+    </user_content>
 
   translation_continue: |
     The previous translation was cut off. Please continue translating from where it stopped.
     Start your response immediately with the continuation - do not include any introduction.
     
-    Last 50 characters of previous translation: "{{last_content}}"
+    Last 50 characters of previous translation: <last_translation>{{last_content}}</last_translation>
     
-    Continue translating:
+    Continue translating the following content:
+    <user_content>
     {{remaining_text}}
+    </user_content>
 
   parsing: |
     Explain this {{source_lang}} word/phrase in {{target_lang}}. Only include relevant information:
@@ -88,8 +96,9 @@ user:
     Translate the following {{source_lang}} markdown content to {{target_lang}}.
     Remember to end with <!-- TRANSLATION_END --> when the ENTIRE document is translated.
     
-    Content to translate:
+    <user_content>
     {{text}}
+    </user_content>
 
 styles:
   formal: "Use formal, professional language appropriate for business or official contexts."
